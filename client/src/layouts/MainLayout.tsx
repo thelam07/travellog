@@ -14,8 +14,10 @@ export default function MainLayout() {
             <NavLink to="/explore">Khám phá</NavLink>
             {user ? (
               <>
-                {/* Tuần 2: thay bằng menu người dùng (trang cá nhân, đổi mật khẩu) */}
+                {/* Sau này gom vào menu người dùng (trang cá nhân, đổi mật khẩu) */}
+                {user.role === 'admin' && <NavLink to="/admin">Quản trị</NavLink>}
                 <span className="muted">@{user.username}</span>
+                <NavLink to="/settings/password">Đổi mật khẩu</NavLink>
                 <button type="button" className="btn btn-ghost" onClick={logout}>
                   Đăng xuất
                 </button>

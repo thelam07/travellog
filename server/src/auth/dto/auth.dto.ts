@@ -37,3 +37,15 @@ export class LoginDto {
   @IsNotEmpty({ message: 'Nhập mật khẩu' })
   password: string;
 }
+
+// BR19: đổi mật khẩu phải nhập đúng mật khẩu cũ.
+export class ChangePasswordDto {
+  @IsString()
+  @IsNotEmpty({ message: 'Nhập mật khẩu hiện tại' })
+  currentPassword: string;
+
+  @IsString()
+  @Matches(PASSWORD_RULE, { message: PASSWORD_MESSAGE })
+  @MaxLength(72)
+  newPassword: string;
+}

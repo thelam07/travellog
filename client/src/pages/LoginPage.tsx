@@ -6,9 +6,9 @@ import { hasErrors, validateEmail, type Errors } from '../utils/validators';
 
 type Field = 'email' | 'password';
 
-// F01b. Ô nhập dùng thẻ thường; khi C xong FormField / Button thì thay vào.
-export default function LoginPage() {
-  const { login } = useAuth();
+// F01b (thành viên) và F01c (admin, BR20). Ô nhập dùng thẻ thường; khi C xong FormField / Button thì thay vào.
+export default function LoginPage({ admin = false }: { admin?: boolean }) {
+  const { login, adminLogin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as { from?: string; expired?: boolean } | null;
@@ -19,6 +19,7 @@ export default function LoginPage() {
     state?.expired ? 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.' : null,
   );
   const [loading, setLoading] = useState(false);
+  const idPrefix = admin ? 'admin-login' : 'login';
 
   const set = (field: Field, value: string) => {
     setValues((v) => ({ ...v, [field]: value }));
@@ -37,8 +38,14 @@ export default function LoginPage() {
     setLoading(true);
     setFormError(null);
     try {
-      await login({ email: values.email.trim().toLowerCase(), password: values.password });
-      navigate(state?.from && !state.from.startsWith('/admin') ? state.from : '/', { replace: true });
+      const body = { email: values.email.trim().toLowerCase(), password: values.password };
+      if (admin) {
+        await adminLogin(body);
+        navigate(state?.from?.startsWith('/admin') ? state.from : '/admin', { replace: true });
+      } else {
+        await login(body);
+        navigate(state?.from && !state.from.startsWith('/admin') ? state.from : '/', { replace: true });
+      }
     } catch (err) {
       const { code, message } = parseError(err);
       setErrors(fieldErrorsFrom(err));
@@ -56,15 +63,15 @@ export default function LoginPage() {
 
   return (
     <>
-      <h1>Đăng nhập</h1>
-      <p className="muted">Chào mừng trở lại TravelLog!</p>
+      <h1>{admin ? 'Đăng nhập quản trị' : 'Đăng nhập'}</h1>
+      <p className="muted">{admin ? 'Chỉ dành cho tài khoản quản trị viên.' : 'Chào mừng trở lại TravelLog!'}</p>
       <form onSubmit={submit} className="stack" noValidate>
         <div className="form-field">
-          <label htmlFor="login-email">
+          <label htmlFor={`${idPrefix}-email`}>
             Email<span className="required"> *</span>
           </label>
           <input
-            id="login-email"
+            id={`${idPrefix}-email`}
             type="email"
             autoComplete="email"
             value={values.email}
@@ -74,11 +81,11 @@ export default function LoginPage() {
           {errors.email && <div className="field-error">{errors.email}</div>}
         </div>
         <div className="form-field">
-          <label htmlFor="login-password">
+          <label htmlFor={`${idPrefix}-password`}>
             Mật khẩu<span className="required"> *</span>
           </label>
           <input
-            id="login-password"
+            id={`${idPrefix}-password`}
             type="password"
             autoComplete="current-password"
             value={values.password}
@@ -92,10 +99,18 @@ export default function LoginPage() {
           {loading ? 'Đang đăng nhập…' : 'Đăng nhập'}
         </button>
       </form>
-      <p className="muted small">Quên mật khẩu? Vui lòng liên hệ quản trị viên để được đặt lại.</p>
-      <p>
-        Chưa có tài khoản? <Link to="/register">Đăng ký</Link> · <Link to="/explore">Xem bài công khai</Link>
-      </p>
+      {admin ? (
+        <p className="small">
+          <Link to="/login">← Đăng nhập thành viên</Link>
+        </p>
+      ) : (
+        <>
+          <p className="muted small">Quên mật khẩu? Vui lòng liên hệ quản trị viên để được đặt lại.</p>
+          <p>
+            Chưa có tài khoản? <Link to="/register">Đăng ký</Link> · <Link to="/explore">Xem bài công khai</Link>
+          </p>
+        </>
+      )}
     </>
   );
 }

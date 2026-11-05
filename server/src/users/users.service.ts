@@ -48,4 +48,14 @@ export class UsersService {
   findByEmailWithPassword(email: string) {
     return this.users.findOne({ email }).select('+passwordHash');
   }
+
+  // BR11: ghi lại thời điểm đổi để token phát trước đó bị từ chối.
+  async setPassword(userId: string, password: string): Promise<Date> {
+    const changedAt = new Date();
+    await this.users.updateOne(
+      { _id: userId },
+      { passwordHash: await this.hashPassword(password), passwordChangedAt: changedAt },
+    );
+    return changedAt;
+  }
 }

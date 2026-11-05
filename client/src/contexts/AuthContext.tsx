@@ -12,9 +12,12 @@ interface AuthContextValue {
   isAdmin: boolean;
   isMember: boolean;
   login: (body: Credentials) => Promise<User>;
+  adminLogin: (body: Credentials) => Promise<User>;
   register: (body: { username: string; email: string; password: string }) => Promise<User>;
   logout: () => void;
   setUser: (user: User) => void;
+  /** PATCH /auth/password trả token mới, token cũ hết hiệu lực (BR11) */
+  replaceToken: (token: string) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -74,9 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin: user?.role === 'admin',
       isMember: user?.role === 'member',
       login: (body) => authApi.login(body).then(acceptAuth),
+      adminLogin: (body) => authApi.adminLogin(body).then(acceptAuth),
       register: (body) => authApi.register(body).then(acceptAuth),
       logout,
       setUser,
+      replaceToken: (t) => {
+        tokenStorage.set(t);
+        setToken(t);
+      },
     }),
     [user, token, ready, acceptAuth, logout],
   );
