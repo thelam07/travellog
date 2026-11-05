@@ -1,6 +1,9 @@
 import { Controller, Get, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from './auth/auth.module';
+import { DatabaseModule } from './database.module';
+import { UsersModule } from './users/users.module';
 
 // Render gọi để kiểm tra server còn sống; cũng dùng để "đánh thức" server trước khi demo.
 @Controller('health')
@@ -19,6 +22,9 @@ class HealthController {
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({ uri: config.getOrThrow<string>('MONGODB_URI') }),
     }),
+    DatabaseModule,
+    AuthModule,
+    UsersModule,
   ],
   controllers: [HealthController],
 })
