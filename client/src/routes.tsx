@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
 import GuestOnly from './components/GuestOnly';
+import RequireAuth from './components/RequireAuth';
 import RequireRole from './components/RequireRole';
 import { useAuth } from './contexts/AuthContext';
 import AdminLayout from './layouts/AdminLayout';
 import AuthLayout from './layouts/AuthLayout';
 import MainLayout from './layouts/MainLayout';
 import RootLayout from './layouts/RootLayout';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PlaceholderPage from './pages/PlaceholderPage';
@@ -33,19 +35,20 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <HomeRoute feed={<PlaceholderPage title="Bảng tin" />} /> }, // C
           { path: 'explore', element: <PlaceholderPage title="Khám phá" /> }, // B
+          { path: 'settings/password', element: <RequireAuth><ChangePasswordPage /></RequireAuth> },
         ],
       },
       {
         element: <AuthLayout />,
         children: [
-          { path: 'login', element: <GuestOnly><LoginPage /></GuestOnly> },
+          { path: 'login', element: <GuestOnly><LoginPage key="member" /></GuestOnly> },
           { path: 'register', element: <GuestOnly><RegisterPage /></GuestOnly> },
-          { path: 'admin/login', element: <PlaceholderPage title="Đăng nhập quản trị" /> }, // A, tuần 2
+          { path: 'admin/login', element: <GuestOnly admin><LoginPage key="admin" admin /></GuestOnly> },
         ],
       },
       {
         path: 'admin',
-        // Tuần 2 có /admin/login: khi đó RequireRole tự đưa người chưa đăng nhập về trang đó.
+        // Chưa đăng nhập → /admin/login; thành viên → / (BR20).
         element: <RequireRole role="admin"><AdminLayout /></RequireRole>,
         children: [
           { index: true, element: <Navigate to="/admin/reports" replace /> },
