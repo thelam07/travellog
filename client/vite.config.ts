@@ -6,7 +6,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:3000', changeOrigin: true },
+      // Server chạy cổng khác thì: API_PROXY=http://localhost:3001 npm run dev
+      '/api': { target: process.env.API_PROXY ?? 'http://localhost:3000', changeOrigin: true },
     },
   },
 });
