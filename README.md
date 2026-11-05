@@ -11,8 +11,8 @@ Bài tập lớn cuối kỳ môn Lập trình Web, Đề 5: mạng xã hội nh
 | Thành viên | Phần phụ trách | Chức năng |
 |---|---|---|
 | A – Nguyen The Lam | Tài khoản, theo dõi, thông báo, quản lý và khoá tài khoản, giao diện sáng/tối | F01–F01d, F04, F08, F10, F11, F14, F16–F18 |
-| B – … | Bài viết, tìm kiếm, bản đồ, deploy | F02, F03, F05, N01, N04 |
-| C – … | Bảng tin, thích, bình luận, báo cáo, thống kê | F06, F07, F09, F12, F13, F15, N02 |
+| B – dinhquan-ptit | Bài viết, tìm kiếm, bản đồ, deploy | F02, F03, F05, N01, N04 |
+| C – Tqh2910 | Bảng tin, thích, bình luận, báo cáo, thống kê | F06, F07, F09, F12, F13, F15, N02 |
 
 ## Công nghệ
 
