@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import UserInitial from '../components/UserInitial';
 import { useNotificationStore } from '../stores/useNotificationStore';
@@ -26,6 +26,13 @@ export default function NotificationsPage() {
     void loadFirst();
     void fetchUnreadCount();
   }, [loadFirst, fetchUnreadCount]);
+
+  // Đang mở trang mà polling của chuông thấy số chưa đọc tăng → tải lại danh sách để khớp với chuông
+  const prevUnread = useRef(unreadCount);
+  useEffect(() => {
+    if (unreadCount > prevUnread.current) void loadFirst();
+    prevUnread.current = unreadCount;
+  }, [unreadCount, loadFirst]);
 
   const open = (n: Notification) => {
     void markRead(n._id);
