@@ -151,3 +151,26 @@ input[aria-invalid='true'], textarea[aria-invalid='true'] { border-color: var(--
 .narrow { max-width: 480px; }
 .admin-account { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; font-size: 0.92rem; }
 .admin-account .btn { justify-content: flex-start; padding-left: 0; }
+
+/* ===== Trang cá nhân, theo dõi (A) ===== */
+.btn-secondary { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+.btn-secondary:hover:not(:disabled) { background: var(--border); }
+.link-btn { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+.link-btn:hover { text-decoration: underline; }
+.badge { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; vertical-align: middle; background: var(--primary-soft); color: var(--primary); }
+.badge-danger { background: var(--danger-soft); color: var(--danger); }
+.user-initial { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; object-fit: cover; background: var(--primary-soft); color: var(--primary); font-weight: 700; }
+.profile-header { display: flex; gap: 20px; align-items: flex-start; }
+.profile-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.profile-info h1 { margin: 0; }
+.profile-info p { margin: 0; white-space: pre-line; }
+.profile-counts { display: flex; flex-wrap: wrap; gap: 16px; }
+.follow-btn { display: inline-flex; flex-direction: column; gap: 4px; align-self: flex-start; }
+.dialog-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+.dialog { width: 100%; max-width: 420px; max-height: 80vh; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+.dialog-head { display: flex; align-items: center; justify-content: space-between; }
+.dialog-head h2 { margin: 0; font-size: 1.15rem; }
+.user-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.user-row { display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: var(--radius-sm); color: inherit; }
+.user-row:hover { background: var(--surface-2); text-decoration: none; }
+@media (max-width: 560px) { .profile-header { flex-direction: column; align-items: center; text-align: center; } .profile-counts { justify-content: center; } .follow-btn { align-self: center; } }

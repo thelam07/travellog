@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
+import { FollowsModule } from '../follows/follows.module';
+import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
-// Tuần 2 thêm UsersController (trang cá nhân, sửa hồ sơ, avatar).
 @Module({
+  imports: [FollowsModule],
+  controllers: [UsersController],
   providers: [UsersService],
   exports: [UsersService],
 })
