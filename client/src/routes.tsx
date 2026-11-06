@@ -12,6 +12,7 @@ import ChangePasswordPage from './pages/ChangePasswordPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/RegisterPage';
 
 // Trang chủ: khách → /explore, admin → /admin, thành viên → bảng tin (C thay PlaceholderPage bằng FeedPage).
@@ -35,6 +36,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <HomeRoute feed={<PlaceholderPage title="Bảng tin" />} /> }, // C
           { path: 'explore', element: <PlaceholderPage title="Khám phá" /> }, // B
+          { path: 'u/:username', element: <ProfilePage /> },
           { path: 'settings/password', element: <RequireAuth><ChangePasswordPage /></RequireAuth> },
         ],
       },
