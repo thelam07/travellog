@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { SchemaTypes, Types } from 'mongoose';
+import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 import { extractHashtags, normalizeKey } from '../../common/utils/text';
 
 // Mỗi ảnh có _id riêng để sửa bài giữ/bỏ từng ảnh (BR15).
@@ -58,7 +58,7 @@ export class Post {
   updatedAt: Date;
 }
 
-export type PostDocument = Post & { _id: Types.ObjectId };
+export type PostDocument = HydratedDocument<Post>;
 export const PostSchema = SchemaFactory.createForClass(Post);
 
 // Index theo mục 5.1.
@@ -75,7 +75,7 @@ PostSchema.index({ createdAt: -1, _id: -1 });
 // BR13: tách hashtag từ content. BR16: nameKey = normalizeKey(location.name).
 // Mongoose 9: hook không dùng tham số next, dùng hàm async.
 PostSchema.pre('save', async function () {
-  const post = this as unknown as PostDocument;
+  const post = this as PostDocument;
   if (post.isModified('content')) {
     post.hashtags = extractHashtags(post.content);
   }
