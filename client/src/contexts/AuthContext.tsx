@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { useNavigate } from 'react-router';
 import { setSessionExpiredHandler, tokenStorage } from '../api/client';
 import { authApi, type Credentials } from '../api/auth';
+import { useNotificationStore } from '../stores/useNotificationStore';
 import type { AuthResponse, User } from '../types';
 
 interface AuthContextValue {
@@ -22,6 +23,11 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// Đổi người dùng thì xoá dữ liệu của người trước (C thêm reset bảng tin vào đây)
+function resetStores() {
+  useNotificationStore.getState().reset();
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [token, setToken] = useState<string | null>(() => tokenStorage.get());
@@ -32,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     tokenStorage.clear();
     setToken(null);
     setUser(null);
+    resetStores();
   }, []);
 
   // Có token cũ (mở lại trang, F5) → hỏi server người dùng hiện tại; lỗi thì đăng xuất
@@ -63,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const acceptAuth = useCallback((res: AuthResponse) => {
     tokenStorage.set(res.token);
+    resetStores();
     setToken(res.token);
     setUser(res.user);
     setReady(true);

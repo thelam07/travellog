@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model, Types } from 'mongoose';
 import { CURSOR_SORT, cursorFilter, toCursorPage } from '../common/utils/cursor';
+import { NotificationsService } from '../notifications/notifications.service';
 import { User, USER_SUMMARY_FIELDS } from '../users/schemas/user.schema';
 import { toUserSummary } from '../users/user.mapper';
 import { Follow } from './schemas/follow.schema';
@@ -13,6 +14,7 @@ export class FollowsService {
   constructor(
     @InjectModel(Follow.name) private readonly follows: Model<Follow>,
     @InjectModel(User.name) private readonly users: Model<User>,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // B dùng cho bộ lọc quyền xem bài (BR01), C dùng cho bảng tin (BR12).
@@ -48,7 +50,7 @@ export class FollowsService {
       if (e?.code === 11000) throw new ConflictException({ code: 'ALREADY_FOLLOWING', message: 'Bạn đã theo dõi người này' });
       throw e;
     }
-    // Tuần 3: gọi notifications.notify({ recipient: targetId, actor: me, type: 'follow' }) (BR08).
+    await this.notifications.notify({ recipient: targetId, actor: me, type: 'follow' });
     return { following: true };
   }
 

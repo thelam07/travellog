@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router';
+import NotificationBell from '../components/NotificationBell';
 import { useAuth } from '../contexts/AuthContext';
 
 // Khung trang chính: header + nội dung trang con qua <Outlet />.
@@ -16,6 +17,7 @@ export default function MainLayout() {
               <>
                 {/* Sau này gom vào menu người dùng (trang cá nhân, đổi mật khẩu) */}
                 {user.role === 'admin' && <NavLink to="/admin">Quản trị</NavLink>}
+                <NotificationBell />
                 {user.role === 'member' ? (
                   <NavLink to={`/u/${user.username}`}>@{user.username}</NavLink>
                 ) : (
