@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database.module';
 import { FollowsModule } from './follows/follows.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { PostsModule } from './posts/posts.module';
 import { UsersModule } from './users/users.module';
 
 // Render gọi để kiểm tra server còn sống; cũng dùng để "đánh thức" server trước khi demo.
@@ -29,6 +30,7 @@ class HealthController {
     UsersModule,
     FollowsModule,
     NotificationsModule,
+    PostsModule,
   ],
   controllers: [HealthController],
 })
