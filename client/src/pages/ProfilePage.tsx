@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { usersApi } from '../api/users';
 import { parseError } from '../api/client';
 import FollowButton from '../components/FollowButton';
@@ -8,7 +8,7 @@ import UserInitial from '../components/UserInitial';
 import { useAuth } from '../contexts/AuthContext';
 import type { Profile } from '../types';
 
-// F04. Phần danh sách bài (B) gắn vào dưới header khi có PostList; nút "Sửa hồ sơ" thêm ở việc sau của A.
+// F04. Phần danh sách bài (B) gắn vào dưới header khi có PostList.
 export default function ProfilePage() {
   const { username = '' } = useParams();
   const { user } = useAuth();
@@ -61,6 +61,11 @@ export default function ProfilePage() {
               <strong>{profile.followingCount}</strong> đang theo dõi
             </button>
           </div>
+          {isSelf && (
+            <Link to="/settings/profile" className="btn btn-secondary">
+              Sửa hồ sơ
+            </Link>
+          )}
           {!isSelf && profile.role !== 'admin' && (
             <FollowButton
               key={`${profile._id}-${profile.isFollowing}`}

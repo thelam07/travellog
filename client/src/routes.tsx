@@ -9,6 +9,7 @@ import AuthLayout from './layouts/AuthLayout';
 import MainLayout from './layouts/MainLayout';
 import RootLayout from './layouts/RootLayout';
 import ChangePasswordPage from './pages/ChangePasswordPage';
+import EditProfilePage from './pages/EditProfilePage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PlaceholderPage from './pages/PlaceholderPage';
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
           { index: true, element: <HomeRoute feed={<PlaceholderPage title="Bảng tin" />} /> }, // C
           { path: 'explore', element: <PlaceholderPage title="Khám phá" /> }, // B
           { path: 'u/:username', element: <ProfilePage /> },
+          { path: 'settings/profile', element: <RequireRole role="member"><EditProfilePage /></RequireRole> },
           { path: 'settings/password', element: <RequireAuth><ChangePasswordPage /></RequireAuth> },
         ],
       },
