@@ -174,3 +174,8 @@ input[aria-invalid='true'], textarea[aria-invalid='true'] { border-color: var(--
 .user-row { display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: var(--radius-sm); color: inherit; }
 .user-row:hover { background: var(--surface-2); text-decoration: none; }
 @media (max-width: 560px) { .profile-header { flex-direction: column; align-items: center; text-align: center; } .profile-counts { justify-content: center; } .follow-btn { align-self: center; } }
+input:disabled { background: var(--surface-2); color: var(--text-muted); }
+.form-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+a.btn:hover { text-decoration: none; }
+.profile-info > .btn { align-self: flex-start; }
+@media (max-width: 560px) { .profile-info > .btn { align-self: center; } }

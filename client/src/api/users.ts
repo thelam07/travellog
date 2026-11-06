@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { CursorPage, Profile, UserSummary } from '../types';
+import type { CursorPage, Profile, User, UserSummary } from '../types';
 
 const path = (username: string) => `/users/${encodeURIComponent(username)}`;
 
@@ -13,6 +13,7 @@ export const usersApi = {
     api
       .get<CursorPage<UserSummary>>(`${path(username)}/following`, { params: { cursor: cursor ?? undefined } })
       .then((r) => r.data),
+  updateMe: (body: { displayName?: string; bio?: string }) => api.patch<User>('/users/me', body).then((r) => r.data),
   follow: (userId: string) => api.post<{ following: boolean }>('/follows', { userId }).then((r) => r.data),
   unfollow: (userId: string) => api.delete<{ following: boolean }>(`/follows/${userId}`).then((r) => r.data),
 };

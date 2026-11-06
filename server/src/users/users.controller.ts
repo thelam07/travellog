@@ -1,24 +1,45 @@
-import { Controller, Get, NotFoundException, Param, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { Transform } from 'class-transformer';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 import { Model } from 'mongoose';
 import { AuthUser } from '../common/auth-user';
-import { CurrentUser } from '../common/decorators';
-import { OptionalJwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { CurrentUser, Roles } from '../common/decorators';
+import { JwtAuthGuard, OptionalJwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
 import { FollowsService } from '../follows/follows.service';
 import { User } from './schemas/user.schema';
-import { toUserSummary } from './user.mapper';
+import { toUser, toUserSummary } from './user.mapper';
 
-// Route cố định (/users/me…) phải khai báo trước /users/:username (mục 6). Sửa hồ sơ, avatar: việc sau của A.
+const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
+
+// F10. Username, email, role không có trong DTO nên whitelist bỏ đi, không sửa được qua đây.
+class UpdateProfileDto {
+  @IsOptional() @Transform(trim) @IsString() @MaxLength(50, { message: 'Tên hiển thị tối đa 50 kí tự' }) displayName?: string;
+  @IsOptional() @IsString() @MaxLength(200, { message: 'Giới thiệu tối đa 200 kí tự' }) bio?: string;
+}
+
+// Route cố định (/users/me…) phải khai báo trước /users/:username (mục 6). Avatar: việc sau của A (chờ StorageService của B).
 @Controller('users')
-@UseGuards(OptionalJwtAuthGuard)
 export class UsersController {
   constructor(
     @InjectModel(User.name) private readonly users: Model<User>,
     private readonly follows: FollowsService,
   ) {}
 
+  // Tên hiển thị để trống thì hiện username (toUser).
+  @Patch('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('member')
+  async updateMe(@CurrentUser() user: AuthUser, @Body() dto: UpdateProfileDto) {
+    const updated = await this.users.findByIdAndUpdate(user.id, dto, { returnDocument: 'after', runValidators: true }).lean();
+    if (!updated) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Không tìm thấy tài khoản' });
+    return toUser(updated);
+  }
+
   // F04: khách xem được; có token thì biết mình đã theo dõi chưa.
   @Get(':username')
+  @UseGuards(OptionalJwtAuthGuard)
   async profile(@Param('username') username: string, @CurrentUser() viewer?: AuthUser) {
     const user = await this.findVisible(username, viewer);
     const [followerCount, followingCount, isFollowing] = await Promise.all([
@@ -41,12 +62,14 @@ export class UsersController {
   }
 
   @Get(':username/followers')
+  @UseGuards(OptionalJwtAuthGuard)
   async followers(@Param('username') username: string, @Query('cursor') cursor?: string, @CurrentUser() viewer?: AuthUser) {
     const user = await this.findVisible(username, viewer);
     return this.follows.listUsers(user._id, 'followers', cursor);
   }
 
   @Get(':username/following')
+  @UseGuards(OptionalJwtAuthGuard)
   async following(@Param('username') username: string, @Query('cursor') cursor?: string, @CurrentUser() viewer?: AuthUser) {
     const user = await this.findVisible(username, viewer);
     return this.follows.listUsers(user._id, 'following', cursor);
