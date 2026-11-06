@@ -12,6 +12,7 @@ import ChangePasswordPage from './pages/ChangePasswordPage';
 import EditProfilePage from './pages/EditProfilePage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
+import NotificationsPage from './pages/NotificationsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/RegisterPage';
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
           { index: true, element: <HomeRoute feed={<PlaceholderPage title="Bảng tin" />} /> }, // C
           { path: 'explore', element: <PlaceholderPage title="Khám phá" /> }, // B
           { path: 'u/:username', element: <ProfilePage /> },
+          { path: 'notifications', element: <RequireRole role="member"><NotificationsPage /></RequireRole> },
           { path: 'settings/profile', element: <RequireRole role="member"><EditProfilePage /></RequireRole> },
           { path: 'settings/password', element: <RequireAuth><ChangePasswordPage /></RequireAuth> },
         ],
