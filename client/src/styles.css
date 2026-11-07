@@ -157,7 +157,7 @@ input[aria-invalid='true'], textarea[aria-invalid='true'] { border-color: var(--
 .btn-secondary:hover:not(:disabled) { background: var(--border); }
 .link-btn { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
 .link-btn:hover { text-decoration: underline; }
-.badge { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; vertical-align: middle; background: var(--primary-soft); color: var(--primary); }
+.badge { display: inline-block; white-space: nowrap; margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; vertical-align: middle; background: var(--primary-soft); color: var(--primary); }
 .badge-danger { background: var(--danger-soft); color: var(--danger); }
 .user-initial { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; object-fit: cover; background: var(--primary-soft); color: var(--primary); font-weight: 700; }
 .profile-header { display: flex; gap: 20px; align-items: flex-start; }
@@ -214,3 +214,9 @@ a.btn:hover { text-decoration: none; }
   .table td { display: flex; justify-content: space-between; gap: 12px; border: 0; padding: 6px 12px; }
   .table td::before { content: attr(data-label); font-size: 0.8rem; color: var(--text-muted); }
 }
+
+/* ===== Nút sáng / tối (A) ===== */
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); color: inherit; font-size: 1rem; cursor: pointer; }
+.icon-btn:hover { background: var(--surface-2); }
+.auth-page .icon-btn { position: absolute; top: 16px; right: 16px; }
+.admin-side .icon-btn { margin-top: 8px; }

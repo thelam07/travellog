@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet } from 'react-router';
 import NotificationBell from '../components/NotificationBell';
+import ThemeToggle from '../components/ThemeToggle';
 import { useAuth } from '../contexts/AuthContext';
 
 // Khung trang chính: header + nội dung trang con qua <Outlet />.
@@ -34,6 +35,7 @@ export default function MainLayout() {
                 <NavLink to="/register">Đăng ký</NavLink>
               </>
             )}
+            <ThemeToggle />
           </nav>
         </div>
       </header>
