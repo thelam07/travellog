@@ -15,9 +15,10 @@ export const PostImageSchema = SchemaFactory.createForClass(PostImage);
 @Schema({ _id: false })
 export class PostLocation {
   @Prop({ type: String, required: true, trim: true, maxlength: 200 }) name: string;
-  // BR16: nameKey = chữ thường, bỏ dấu, gộp khoảng trắng; hook pre('save') tự sinh.
-  @Prop({ type: String, required: true, index: true }) nameKey: string;
-  @Prop({ type: String, default: null, index: true }) placeId?: string | null;
+  // BR16: nameKey = chữ thường, bỏ dấu, gộp khoảng trắng; hook pre('validate') tự sinh.
+  // Index khai báo ở PostSchema.index bên dưới, không đặt index: true ở đây để tránh trùng.
+  @Prop({ type: String, required: true }) nameKey: string;
+  @Prop({ type: String, default: null }) placeId?: string | null;
   @Prop({ type: String, default: null }) address?: string | null;
   @Prop({ type: Number, default: null, min: -90, max: 90 }) lat?: number | null;
   @Prop({ type: Number, default: null, min: -180, max: 180 }) lng?: number | null;
@@ -73,8 +74,10 @@ PostSchema.index({ 'location.placeId': 1 });
 PostSchema.index({ createdAt: -1, _id: -1 });
 
 // BR13: tách hashtag từ content. BR16: nameKey = normalizeKey(location.name).
+// Dùng pre('validate') thay vì pre('save') vì Mongoose chạy validate trước pre('save');
+// nameKey có required: true nên phải sinh trước khi validate.
 // Mongoose 9: hook không dùng tham số next, dùng hàm async.
-PostSchema.pre('save', async function () {
+PostSchema.pre('validate', async function () {
   const post = this as PostDocument;
   if (post.isModified('content')) {
     post.hashtags = extractHashtags(post.content);
