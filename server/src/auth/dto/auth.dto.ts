@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsEmail, IsNotEmpty, IsString, Length, Matches, MaxLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsString, Length, Matches, MaxLength } from 'class-validator';
 
 const lower = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim().toLowerCase() : value);
 
@@ -44,6 +44,20 @@ export class ChangePasswordDto {
   @IsNotEmpty({ message: 'Nhập mật khẩu hiện tại' })
   currentPassword: string;
 
+  @IsString()
+  @Matches(PASSWORD_RULE, { message: PASSWORD_MESSAGE })
+  @MaxLength(72)
+  newPassword: string;
+}
+
+// UC16, BR18: chỉ admin tạo được admin (trang /admin/users).
+export class AdminCreateUserDto extends RegisterDto {
+  @IsIn(['member', 'admin'], { message: 'Vai trò là member hoặc admin' })
+  role: 'member' | 'admin';
+}
+
+// UC18: admin đặt mật khẩu tạm cho người quên mật khẩu.
+export class ResetPasswordDto {
   @IsString()
   @Matches(PASSWORD_RULE, { message: PASSWORD_MESSAGE })
   @MaxLength(72)

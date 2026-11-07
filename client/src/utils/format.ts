@@ -13,3 +13,5 @@ export function timeAgo(iso: string): string {
   if (diff < 86400 * 7) return `${Math.floor(diff / 86400)} ngày trước`;
   return formatDate(iso);
 }
+
+export const ROLE_LABELS = { member: 'Thành viên', admin: 'Quản trị viên' } as const;

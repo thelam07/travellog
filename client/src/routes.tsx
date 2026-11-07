@@ -5,6 +5,7 @@ import RequireAuth from './components/RequireAuth';
 import RequireRole from './components/RequireRole';
 import { useAuth } from './contexts/AuthContext';
 import AdminLayout from './layouts/AdminLayout';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AuthLayout from './layouts/AuthLayout';
 import MainLayout from './layouts/MainLayout';
 import RootLayout from './layouts/RootLayout';
@@ -59,7 +60,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/admin/reports" replace /> },
           { path: 'reports', element: <PlaceholderPage title="Báo cáo vi phạm" /> }, // C
-          { path: 'users', element: <PlaceholderPage title="Quản lý tài khoản" /> }, // A
+          { path: 'users', element: <AdminUsersPage /> },
           { path: 'stats', element: <PlaceholderPage title="Thống kê địa điểm" /> }, // C
         ],
       },

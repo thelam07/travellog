@@ -193,3 +193,24 @@ a.btn:hover { text-decoration: none; }
 .notification-list .unread button { background: var(--primary-soft); }
 .notification-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); flex-shrink: 0; }
+
+/* ===== Quản lý tài khoản (A) ===== */
+.btn-sm { padding: 0.35rem 0.7rem; font-size: 0.85rem; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover:not(:disabled) { filter: brightness(0.92); }
+.form-actions.end { justify-content: flex-end; }
+.search-row { display: flex; gap: 8px; max-width: 520px; }
+.table-wrap { padding: 0; overflow-x: auto; }
+.table-wrap.is-loading { opacity: 0.6; }
+.table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.table th, .table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.table th { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+.table tr:last-child td { border-bottom: 0; }
+.table select { width: auto; padding: 0.3rem 0.5rem; }
+.pager { display: flex; align-items: center; gap: 12px; }
+@media (max-width: 760px) {
+  .table thead { display: none; }
+  .table tr { display: block; border-bottom: 1px solid var(--border); padding: 6px 0; }
+  .table td { display: flex; justify-content: space-between; gap: 12px; border: 0; padding: 6px 12px; }
+  .table td::before { content: attr(data-label); font-size: 0.8rem; color: var(--text-muted); }
+}
