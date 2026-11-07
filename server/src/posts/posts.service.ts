@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { AuthUser } from '../common/auth-user';
@@ -6,6 +6,8 @@ import { StorageService } from '../common/storage/storage.service';
 import { toUserSummary } from '../users/user.mapper';
 import { CreatePostDto } from './dto/post.dto';
 import { Post, PostDocument } from './schemas/post.schema';
+
+const MAX_IMAGES = 6;
 
 @Injectable()
 export class PostsService {
@@ -18,6 +20,12 @@ export class PostsService {
 
   // Tạo bài viết mới: upload ảnh trước, nếu lưu DB lỗi thì xoá ảnh vừa upload.
   async create(dto: CreatePostDto, files: Express.Multer.File[], user: AuthUser): Promise<PostDocument> {
+    if (files?.length > MAX_IMAGES) {
+      throw new BadRequestException({
+        code: 'TOO_MANY_IMAGES',
+        message: 'Mỗi bài tối đa 6 ảnh',
+      });
+    }
     const uploaded = files?.length ? await this.storage.uploadMany(files, 'posts') : [];
 
     try {
