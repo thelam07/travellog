@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { promises as fs } from 'fs';
-import { extname, join } from 'path';
+import { join } from 'path';
 import { randomUUID } from 'crypto';
 
 // Kết quả trả về khi upload một ảnh.
@@ -31,14 +31,22 @@ export class StorageService {
 
   // Upload một ảnh: ghi file vào uploads/<folder>/<randomUUID>.<ext>, trả về url + publicId.
   // publicId = tên file (không kèm folder) để sau này xoá dễ.
+  // Đuôi file lấy từ mimetype, KHÔNG lấy từ originalname — tránh lưu file .html/.js
+  // mà trình duyệt chạy như trang web (lỗi bảo mật A review ở PR #15).
   async upload(file: Express.Multer.File, folder: string): Promise<UploadedFile> {
     if (this.useCloudinary) {
       // TODO: khi A thêm Cloudinary thì upload lên Cloudinary ở đây.
       throw new Error('Cloudinary chưa được cài đặt');
     }
+    const ext = this.extFromMime(file.mimetype);
+    if (!ext) {
+      throw new BadRequestException({
+        code: 'INVALID_FILE_TYPE',
+        message: 'Chỉ nhận ảnh JPG, PNG, WEBP',
+      });
+    }
     const dir = join(this.uploadsDir, folder);
     await fs.mkdir(dir, { recursive: true });
-    const ext = extname(file.originalname) || this.extFromMime(file.mimetype);
     const name = `${randomUUID()}${ext}`;
     await fs.writeFile(join(dir, name), file.buffer);
     return {

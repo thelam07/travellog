@@ -56,3 +56,21 @@ test('remove: xoá file thật trong uploads/<folder>/', async () => {
   await storage.remove(result.publicId);
   await assert.rejects(() => fs.stat(join(process.cwd(), 'uploads', 'test', result.publicId)));
 });
+
+test('upload: đuôi file lấy từ mimetype, không lấy từ originalname (chống XSS)', async () => {
+  const storage = makeStorage();
+  // originalname là .html nhưng mimetype khai image/png → phải lưu thành .png.
+  const file: Express.Multer.File = { ...fakeFile('x.html'), mimetype: 'image/png' };
+  const result = await storage.upload(file, 'test');
+  assert.match(result.publicId, /\.png$/);
+  await storage.remove(result.publicId);
+});
+
+test('upload: mimetype không phải ảnh thì ném BadRequestException', async () => {
+  const storage = makeStorage();
+  const bad: Express.Multer.File = { ...fakeFile(), mimetype: 'text/html' };
+  await assert.rejects(
+    () => storage.upload(bad, 'test'),
+    (err: Error & { response?: { code?: string } }) => err.response?.code === 'INVALID_FILE_TYPE',
+  );
+});
