@@ -27,10 +27,10 @@ class HealthController {
     }),
     DatabaseModule,
     AuthModule,
+    AdminUsersModule,
     UsersModule,
     FollowsModule,
     NotificationsModule,
-    AdminUsersModule,
   ],
   controllers: [HealthController],
 })
