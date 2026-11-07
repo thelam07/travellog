@@ -10,9 +10,9 @@ Bài tập lớn cuối kỳ môn Lập trình Web, Đề 5: mạng xã hội nh
 
 | Thành viên | Phần phụ trách | Chức năng |
 |---|---|---|
-| A – Nguyen The Lam | Tài khoản, theo dõi, thông báo, quản lý và khoá tài khoản, giao diện sáng/tối | F01–F01d, F04, F08, F10, F11, F14, F16–F18 |
-| B – … | Bài viết, tìm kiếm, bản đồ, deploy | F02, F03, F05, N01, N04 |
-| C – … | Bảng tin, thích, bình luận, báo cáo, thống kê | F06, F07, F09, F12, F13, F15, N02 |
+| A – Nguyen The Lam | Tài khoản, theo dõi, thông báo, quản lý và khoá tài khoản, giao diện sáng/tối, deploy | F01–F01d, F04, F08, F10, F11, F14, F16–F18, N04 |
+| B – dinhquan-ptit | Bài viết, tìm kiếm, bản đồ | F02, F03, F05, N01 |
+| C – Tqh2910 | Bảng tin, thích, bình luận, báo cáo, thống kê | F06, F07, F09, F12, F13, F15, N02 |
 
 ## Công nghệ
 
@@ -26,9 +26,23 @@ TypeScript cho cả client và server.
 
 ## Cách chạy
 
-Cập nhật sau khi có khung server và client.
+Cần Node.js 20 trở lên và MongoDB (có Docker thì chạy `docker compose up -d` ở thư mục gốc).
 
-MongoDB cho môi trường dev: `docker compose up -d`.
+```bash
+# 1. Server
+cd server
+npm install
+cp .env.example .env          # sửa JWT_SECRET thành chuỗi ngẫu nhiên dài
+npm run seed:admin            # tạo admin đầu tiên từ ADMIN_EMAIL / ADMIN_PASSWORD; chạy lại không tạo trùng
+npm run dev                   # http://localhost:3000/api
+
+# 2. Client (terminal khác)
+cd client
+npm install
+npm run dev                   # http://localhost:5173 (tự chuyển /api sang server)
+```
+
+Server chạy cổng khác 3000 thì chạy client bằng `API_PROXY=http://localhost:<cổng> npm run dev`.
 
 ## Tài khoản demo
 
