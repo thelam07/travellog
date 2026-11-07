@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router';
+import ThemeToggle from '../components/ThemeToggle';
 import { useAuth } from '../contexts/AuthContext';
 
 // Khung trang quản trị: menu bên trái, nội dung bên phải.
@@ -20,6 +21,7 @@ export default function AdminLayout() {
           <button type="button" className="btn btn-ghost" onClick={logout}>
             Đăng xuất
           </button>
+          <ThemeToggle />
         </div>
       </aside>
       <main className="admin-main">
