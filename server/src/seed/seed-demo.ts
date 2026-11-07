@@ -1,24 +1,15 @@
 // B5: tạo dữ liệu mẫu (user + bài viết) để test app. Chạy lại không tạo trùng.
-// Ảnh demo dùng PNG 1x1 pixel trong suốt, lưu vào uploads/demo/ với publicId bắt đầu
-// bằng "demo/" để StorageService.remove() bỏ qua (không xoá nhầm khi dọn dẹp).
+// Ảnh demo lấy từ picsum.photos với seed cố định → ổn định giữa các lần chạy và giữa
+// các máy (không phụ thuộc PUBLIC_URL của máy seed). publicId bắt đầu bằng "demo/" để
+// StorageService.remove() bỏ qua khi dọn dẹp.
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { AppModule } from '../app.module';
 import { Post } from '../posts/schemas/post.schema';
-import { StorageService } from '../common/storage/storage.service';
 import { User } from '../users/schemas/user.schema';
 import { UsersService } from '../users/users.service';
-
-// PNG 1x1 pixel trong suốt, 67 bytes — đủ để vượt FileTypeValidator và hiển thị placeholder.
-const TINY_PNG = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-  0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
-  0x89, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
-  0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae,
-  0x42, 0x60, 0x82,
-]);
 
 interface DemoUser {
   username: string;
@@ -104,7 +95,6 @@ async function main() {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn'] });
   try {
     const usersService = app.get(UsersService);
-    const storage = app.get(StorageService);
     const userModel = app.get<Model<User>>(getModelToken(User.name));
     const postModel = app.get<Model<Post>>(getModelToken(Post.name));
 
@@ -123,7 +113,8 @@ async function main() {
     }
 
     // 2. Tạo bài viết demo (idempotent: cùng author + title thì bỏ qua).
-    for (const p of DEMO_POSTS) {
+    for (let i = 0; i < DEMO_POSTS.length; i++) {
+      const p = DEMO_POSTS[i];
       const authorId = userMap.get(p.authorUsername);
       if (!authorId) {
         console.warn(`Bỏ qua bài "${p.title}": không tìm thấy user ${p.authorUsername}.`);
@@ -135,21 +126,12 @@ async function main() {
         continue;
       }
 
-      // Upload 1 ảnh placeholder vào uploads/demo/. publicId thêm prefix "demo/" để
-      // StorageService.remove() bỏ qua khi dọn dẹp.
-      const file = {
-        fieldname: 'images',
-        originalname: 'demo.png',
-        encoding: '7bit',
-        mimetype: 'image/png',
-        size: TINY_PNG.length,
-        buffer: TINY_PNG,
-        destination: '',
-        filename: '',
-        path: '',
-        stream: null as never,
-      } as unknown as Express.Multer.File;
-      const uploaded = await storage.upload(file, 'demo');
+      // 2 ảnh từ picsum với seed cố định → ổn định giữa các lần chạy và các máy.
+      // publicId bắt đầu "demo/" để StorageService.remove() bỏ qua khi dọn dẹp.
+      const images = [1, 2].map((k) => ({
+        url: `https://picsum.photos/seed/travellog-${i}-${k}/1200/800`,
+        publicId: `demo/${i}-${k}`,
+      }));
 
       await postModel.create({
         author: authorId,
@@ -165,7 +147,7 @@ async function main() {
         tripDate: new Date(p.tripDate),
         cost: p.cost,
         visibility: p.visibility,
-        images: [{ url: uploaded.url, publicId: `demo/${uploaded.publicId}` }],
+        images,
       });
       console.log(`Đã tạo bài "${p.title}" của ${p.authorUsername}.`);
     }
