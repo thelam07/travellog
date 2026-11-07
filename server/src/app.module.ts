@@ -1,6 +1,7 @@
 import { Controller, Get, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AdminUsersModule } from './admin-users/admin-users.module';
 import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database.module';
 import { FollowsModule } from './follows/follows.module';
@@ -29,6 +30,7 @@ class HealthController {
     UsersModule,
     FollowsModule,
     NotificationsModule,
+    AdminUsersModule,
   ],
   controllers: [HealthController],
 })

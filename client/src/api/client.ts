@@ -21,7 +21,8 @@ api.interceptors.request.use((config) => {
 });
 
 // AuthContext đăng ký hàm xử lý khi phiên hết hạn (401) hoặc tài khoản bị khoá (403 ACCOUNT_LOCKED)
-type SessionExpiredHandler = () => void;
+export type SessionEndReason = 'expired' | 'locked';
+type SessionExpiredHandler = (reason: SessionEndReason) => void;
 let onSessionExpired: SessionExpiredHandler | null = null;
 export function setSessionExpiredHandler(handler: SessionExpiredHandler | null) {
   onSessionExpired = handler;
@@ -39,7 +40,7 @@ api.interceptors.response.use(
     const hadToken = Boolean(tokenStorage.get());
     const isAuthCall = AUTH_ENDPOINTS.some((p) => url.startsWith(p));
     if (hadToken && !isAuthCall && (status === 401 || (status === 403 && code === 'ACCOUNT_LOCKED'))) {
-      onSessionExpired?.();
+      onSessionExpired?.(code === 'ACCOUNT_LOCKED' ? 'locked' : 'expired');
     }
     return Promise.reject(error);
   },

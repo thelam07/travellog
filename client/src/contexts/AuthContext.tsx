@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { setSessionExpiredHandler, tokenStorage } from '../api/client';
+import { setSessionExpiredHandler, tokenStorage, type SessionEndReason } from '../api/client';
 import { authApi, type Credentials } from '../api/auth';
 import { useNotificationStore } from '../stores/useNotificationStore';
 import type { AuthResponse, User } from '../types';
@@ -19,6 +19,8 @@ interface AuthContextValue {
   setUser: (user: User) => void;
   /** PATCH /auth/password trả token mới, token cũ hết hiệu lực (BR11) */
   replaceToken: (token: string) => void;
+  /** Vì sao phiên vừa bị server kết thúc (bị khoá / hết hạn), để trang đăng nhập báo đúng; null khi tự đăng xuất */
+  sessionEndReason: SessionEndReason | null;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -33,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => tokenStorage.get());
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(() => !tokenStorage.get());
+  const [sessionEndReason, setSessionEndReason] = useState<SessionEndReason | null>(null);
 
   const logout = useCallback(() => {
     tokenStorage.clear();
@@ -57,12 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Interceptor gặp 401 hoặc tài khoản bị khoá → đăng xuất và về trang đăng nhập phù hợp
   useEffect(() => {
-    setSessionExpiredHandler(() => {
+    setSessionExpiredHandler((reason) => {
+      // Lưu lý do ở đây vì state của navigate có thể bị RequireAuth / RequireRole ghi đè khi cùng chuyển trang
+      setSessionEndReason(reason);
       logout();
       const isAdminArea = window.location.pathname.startsWith('/admin');
       navigate(isAdminArea ? '/admin/login' : '/login', {
         replace: true,
-        state: { from: window.location.pathname, expired: true },
+        state: { from: window.location.pathname },
       });
     });
     return () => setSessionExpiredHandler(null);
@@ -71,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const acceptAuth = useCallback((res: AuthResponse) => {
     tokenStorage.set(res.token);
     resetStores();
+    setSessionEndReason(null);
     setToken(res.token);
     setUser(res.user);
     setReady(true);
@@ -93,8 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tokenStorage.set(t);
         setToken(t);
       },
+      sessionEndReason,
     }),
-    [user, token, ready, acceptAuth, logout],
+    [user, token, ready, sessionEndReason, acceptAuth, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -8,15 +8,19 @@ type Field = 'email' | 'password';
 
 // F01b (thành viên) và F01c (admin, BR20). Ô nhập dùng thẻ thường; khi C xong FormField / Button thì thay vào.
 export default function LoginPage({ admin = false }: { admin?: boolean }) {
-  const { login, adminLogin } = useAuth();
+  const { login, adminLogin, sessionEndReason } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as { from?: string; expired?: boolean } | null;
+  const state = location.state as { from?: string } | null;
 
   const [values, setValues] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<Errors<Field>>({});
   const [formError, setFormError] = useState<ReactNode>(
-    state?.expired ? 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.' : null,
+    sessionEndReason === 'locked'
+      ? 'Tài khoản của bạn đã bị khoá. Liên hệ quản trị viên nếu cần hỗ trợ.'
+      : sessionEndReason === 'expired'
+        ? 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.'
+        : null,
   );
   const [loading, setLoading] = useState(false);
   const idPrefix = admin ? 'admin-login' : 'login';
