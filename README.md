@@ -50,4 +50,19 @@ Cập nhật sau.
 
 ## Deploy
 
-Cập nhật sau (Vercel cho client, Render cho server, MongoDB Atlas, Cloudinary).
+| Phần | Địa chỉ | Nơi chạy |
+|---|---|---|
+| Web | https://travellog-rust.vercel.app | Vercel (thư mục `client`, preset Vite) |
+| API | https://travellog-api.onrender.com/api | Render Free, Singapore (thư mục `server`) |
+| CSDL | MongoDB Atlas M0 | AWS Hong Kong |
+
+Cả Vercel và Render tự deploy khi có commit mới trên nhánh `main`, nên muốn cập nhật bản chạy thật thì merge `dev` vào `main`. Các nhánh khác chỉ có bản xem thử (Preview) trên Vercel.
+
+Server Render miễn phí sẽ ngủ sau khoảng 15 phút không ai gọi, lần gọi đầu mất chừng 50 giây. Trước khi demo, mở https://travellog-api.onrender.com/api/health và chờ đến khi thấy `{"ok":true}`.
+
+Biến môi trường (giá trị thật không đưa lên Git):
+
+- Render: `NODE_VERSION`, `MONGODB_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_URL` (địa chỉ web, nhiều địa chỉ cách nhau bằng dấu phẩy), `PUBLIC_URL` (địa chỉ API). Build `npm ci --include=dev && npm run build`, start `npm start`, health check `/api/health`.
+- Vercel: `VITE_API_URL` = địa chỉ API, có `/api` ở cuối.
+
+Admin đầu tiên trên Atlas tạo bằng `npm run seed:admin` chạy từ máy, với `MONGODB_URI` và `ADMIN_*` đặt thành giá trị của Atlas.
