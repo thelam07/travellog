@@ -279,3 +279,7 @@ a.btn:hover { text-decoration: none; }
 .tag { color: var(--primary); font-size: 0.9rem; }
 .post-actions { display: flex; gap: 16px; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px; }
 .post-actions button, .post-actions a { display: flex; align-items: center; gap: 6px; font-size: 0.95rem; text-decoration: none; padding: 4px 12px; }
+
+/* ===== Ảnh đại diện (A) ===== */
+.avatar-picker { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.avatar-picker .stack { flex: 1; min-width: 200px; gap: 6px; align-items: flex-start; }

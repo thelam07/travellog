@@ -2,13 +2,14 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { usersApi } from '../api/users';
 import { fieldErrorsFrom, parseError } from '../api/client';
+import AvatarPicker from '../components/AvatarPicker';
 import { useAuth } from '../contexts/AuthContext';
 import type { Errors } from '../utils/validators';
 
 type Field = 'displayName' | 'bio';
 const LIMITS: Record<Field, number> = { displayName: 50, bio: 200 };
 
-// F10. Ảnh đại diện thêm ở việc sau (chờ StorageService của B). Username, email không đổi được.
+// F10. Username, email không đổi được. Ảnh đại diện lưu riêng qua AvatarPicker, không cần bấm Lưu.
 export default function EditProfilePage() {
   const { user, setUser } = useAuth();
   const [values, setValues] = useState<Record<Field, string>>({
@@ -54,6 +55,7 @@ export default function EditProfilePage() {
     <div className="narrow">
       <h1>Sửa hồ sơ</h1>
       <form onSubmit={submit} className="card stack" noValidate>
+        <AvatarPicker />
         <div className="form-field">
           <label htmlFor="pf-username">Tên đăng nhập</label>
           <input id="pf-username" value={user.username} disabled />
