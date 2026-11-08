@@ -1,30 +1,24 @@
-// client/src/utils/format.ts
+// Định dạng hiển thị dùng chung. B, C thêm hàm của mình (tiền, ngày đi…) vào file này.
 
-// Format thời gian tương đối
-export function formatTimeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diffInSeconds < 60) return `${diffInSeconds} giây trước`;
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `${diffInHours} giờ trước`;
-  const diffInDays = Math.floor(diffInHours / 24);
-  
-  // Quá 7 ngày thì hiện ngày tháng năm
-  if (diffInDays > 7) {
-    return date.toLocaleDateString('vi-VN');
-  }
-  return `${diffInDays} ngày trước`;
+export function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('vi-VN');
 }
 
-// Format tiền tệ VNĐ
+export function timeAgo(iso: string): string {
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return 'vừa xong';
+  if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
+  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)} ngày trước`;
+  return formatDate(iso);
+}
+
+export const ROLE_LABELS = { member: 'Thành viên', admin: 'Quản trị viên' } as const;
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0
+  return new Intl.NumberFormat('vi-VN', { 
+    style: 'currency', 
+    currency: 'VND', 
+    maximumFractionDigits: 0 
   }).format(amount);
 }
