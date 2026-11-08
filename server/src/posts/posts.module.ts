@@ -1,6 +1,12 @@
 import { Module } from '@nestjs/common';
+import { PostsController } from './posts.controller';
+import { PostsService } from './posts.service';
 
-// Module rỗng cho B1: model Post đăng ký tập trung ở DatabaseModule.
-// Controller và service thêm ở B4, B6, B7.
-@Module({})
+// Model Post đăng ký tập trung ở DatabaseModule.
+// StorageService đăng ký ở StorageModule (@Global) nên không cần imports ở đây.
+@Module({
+  controllers: [PostsController],
+  providers: [PostsService],
+  exports: [PostsService],
+})
 export class PostsModule {}

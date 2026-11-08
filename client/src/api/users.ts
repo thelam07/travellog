@@ -14,6 +14,11 @@ export const usersApi = {
       .get<CursorPage<UserSummary>>(`${path(username)}/following`, { params: { cursor: cursor ?? undefined } })
       .then((r) => r.data),
   updateMe: (body: { displayName?: string; bio?: string }) => api.patch<User>('/users/me', body).then((r) => r.data),
+  updateAvatar: (file: File) => {
+    const form = new FormData();
+    form.append('avatar', file);
+    return api.put<User>('/users/me/avatar', form).then((r) => r.data);
+  },
   follow: (userId: string) => api.post<{ following: boolean }>('/follows', { userId }).then((r) => r.data),
   unfollow: (userId: string) => api.delete<{ following: boolean }>(`/follows/${userId}`).then((r) => r.data),
 };

@@ -7,6 +7,7 @@
     "start": "node dist/main.js",
     "dev": "tsc-watch -p tsconfig.build.json --onSuccess \"node dist/main.js\"",
     "seed:admin": "npm run build && node dist/seed/seed-admin.js",
+    "seed:demo": "npm run build && node dist/seed/seed-demo.js",
     "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "cloudinary": "^2.11.0",
     "mongoose": "^9.12.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
     "@types/node": "^22.20.5",
     "@types/passport-jwt": "^4.0.1",
     "tsc-watch": "^7.2.1",
