@@ -259,3 +259,30 @@ a.btn:hover { text-decoration: none; }
   color: var(--text-muted);
 }
 .empty-state-icon { font-size: 3rem; margin-bottom: 12px; color: var(--text-muted); }
+/* ===== PostCard (C3) ===== */
+.post-image-preview {
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.image-overlay {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.65);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+.post-actions button, .post-actions a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95rem;
+  text-decoration: none;
+}
