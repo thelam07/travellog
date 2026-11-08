@@ -15,3 +15,10 @@ export function timeAgo(iso: string): string {
 }
 
 export const ROLE_LABELS = { member: 'Thành viên', admin: 'Quản trị viên' } as const;
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('vi-VN', { 
+    style: 'currency', 
+    currency: 'VND', 
+    maximumFractionDigits: 0 
+  }).format(amount);
+}
