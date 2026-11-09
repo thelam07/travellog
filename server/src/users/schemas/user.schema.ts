@@ -35,6 +35,10 @@ export class User {
   @Prop({ type: Boolean, default: false })
   isLocked: boolean;
 
+  // Admin gốc (mở rộng ngoài thiết kế): không ai khoá / hạ / đặt lại mật khẩu được, chỉ người này trao, thu quyền admin.
+  @Prop({ type: Boolean, default: false })
+  isOwner: boolean;
+
   // BR11: token phát hành trước mốc này bị từ chối.
   @Prop({ type: Date, default: null })
   passwordChangedAt: Date | null;
