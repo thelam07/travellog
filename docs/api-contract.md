@@ -68,6 +68,12 @@ Chi tiết hoá mục 6.1 của [thiet-ke-v1.2.txt](thiet-ke-v1.2.txt). Kiểu d
 | PATCH | /notifications | | `{ updated }` |
 | POST | /reports | `{ postId, reason, note? }` | 201 `Report` |
 
+Thông báo tức thời (N03, Socket.IO): client nối tới gốc server (không có `/api`), gửi `auth: { token }`. Chỉ thành viên được giữ kết nối, token sai, bị khoá hoặc là admin thì server ngắt ngay.
+
+- Sự kiện `notification`: `{ notification: Notification, unreadCount }`, gửi mỗi khi `notify()` tạo hoặc làm mới thông báo.
+- Admin khoá tài khoản hoặc đặt mật khẩu tạm thì server ngắt kết nối; client gọi lại API để biết phiên đã hết.
+- Polling `/notifications/unread-count` 30 giây vẫn giữ để dự phòng.
+
 ## Admin
 
 | Method | URL | Body / query | Trả về |
