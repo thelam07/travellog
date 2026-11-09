@@ -1,10 +1,22 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { join } from 'path';
+import { ServerOptions } from 'socket.io';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { validationPipe } from './common/validation';
+
+// Socket.IO (N03) dùng cùng danh sách CORS với REST.
+class SocketIoAdapter extends IoAdapter {
+  constructor(app: NestExpressApplication, private readonly origins: string[]) {
+    super(app);
+  }
+  createIOServer(port: number, options?: ServerOptions) {
+    return super.createIOServer(port, { ...options, cors: { origin: this.origins } });
+  }
+}
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -15,7 +27,9 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   // CORS chỉ cho địa chỉ client trong .env (mục 0).
-  app.enableCors({ origin: (config.get<string>('CLIENT_URL') ?? 'http://localhost:5173').split(',').map((s) => s.trim()) });
+  const origins = (config.get<string>('CLIENT_URL') ?? 'http://localhost:5173').split(',').map((s) => s.trim());
+  app.enableCors({ origin: origins });
+  app.useWebSocketAdapter(new SocketIoAdapter(app, origins));
   // Kiểm tra dữ liệu đầu vào bằng DTO, lỗi trả theo từng trường (mục 6.3).
   app.useGlobalPipes(validationPipe);
   // Mọi lỗi trả về dạng { error: { code, message, details } } (mục 6).

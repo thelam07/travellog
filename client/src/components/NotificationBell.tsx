@@ -1,18 +1,21 @@
 import { NavLink } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotificationSocket } from '../hooks/useNotificationSocket';
 import { usePolling } from '../hooks/usePolling';
 import { useNotificationStore } from '../stores/useNotificationStore';
 
 /**
- * F11: chuông thông báo, số chưa đọc tự cập nhật mỗi 30 giây; chỉ thành viên (admin không có thông báo).
- * Header và BottomNav cùng hiện chuông, đọc chung một store: chỉ header gọi API (poll), BottomNav đặt poll={false}.
+ * F11: chuông thông báo; chỉ thành viên (admin không có thông báo). Thông báo mới tới ngay qua Socket.IO (N03),
+ * polling 30 giây để dự phòng khi socket rớt.
+ * Header và BottomNav cùng hiện chuông, đọc chung một store: chỉ header gọi API và mở socket, BottomNav đặt poll={false}.
  */
 export default function NotificationBell({ label = false, poll = true }: { label?: boolean; poll?: boolean }) {
-  const { isMember } = useAuth();
+  const { isMember, token } = useAuth();
   const unread = useNotificationStore((s) => s.unreadCount);
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
 
   usePolling(fetchUnreadCount, 30000, isMember && poll);
+  useNotificationSocket(token, isMember && poll);
 
   if (!isMember) return null;
   return (

@@ -44,9 +44,37 @@ npm run dev                   # http://localhost:5173 (tự chuyển /api sang s
 
 Server chạy cổng khác 3000 thì chạy client bằng `API_PROXY=http://localhost:<cổng> npm run dev`.
 
+## Kiểm thử
+
+```bash
+cd server
+npm test                      # test đơn vị (hàm chuẩn hoá chữ, StorageService…), không cần server
+
+# Test API (e2e): gọi thẳng API đang chạy để kiểm phân quyền và luật BR. Nên dùng DB riêng.
+MONGODB_URI=mongodb://localhost:27017/travellog_test PORT=3001 npm run seed:admin
+MONGODB_URI=mongodb://localhost:27017/travellog_test PORT=3001 npm start   # terminal khác, sau npm run build
+API_URL=http://localhost:3001/api ADMIN_PASSWORD=<mật khẩu admin trong .env> npm run test:e2e
+```
+
+Test e2e tự đăng ký tài khoản riêng mỗi lần chạy, chỉ cần có admin. Ai merge API mới thì thêm test vào `server/test/api.e2e.test.mjs`.
+
 ## Tài khoản demo
 
-Cập nhật sau.
+Dùng trên web thật (https://travellog-rust.vercel.app) hoặc trên máy sau khi chạy `npm run seed:demo` trong `server/`.
+
+| Vai trò | Email | Mật khẩu |
+|---|---|---|
+| Thành viên | `lan@demo.travellog` (Lan Nguyễn) | `Demo12345` |
+| Thành viên | `minh@demo.travellog` (Minh Trần) | `Demo12345` |
+| Thành viên | `hoa@demo.travellog` (Hoa Lê) | `Demo12345` |
+| Thành viên | `tuan@demo.travellog` (Tuấn Phạm) | `Demo12345` |
+| Thành viên | `mai@demo.travellog` (Mai Vũ) | `Demo12345` |
+| Admin | `admin@travellog.local`, đăng nhập ở `/admin/login` | Gửi riêng cho giảng viên (repo công khai nên không ghi ở đây) |
+
+Gợi ý thử nhanh:
+
+- Mở thêm một cửa sổ ẩn danh đăng nhập người thứ hai rồi theo dõi người thứ nhất: chuông bên kia nhảy số ngay.
+- Lần đầu mở web có thể chờ 30–60 giây vì server miễn phí trên Render đang ngủ.
 
 ## Deploy
 

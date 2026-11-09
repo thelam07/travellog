@@ -23,6 +23,7 @@ Chi tiết hoá mục 6.1 của [thiet-ke-v1.2.txt](thiet-ke-v1.2.txt). Kiểu d
 
 | Method | URL | Body / query | Trả về |
 |---|---|---|---|
+| GET | /users/search | `?q` (bỏ `@` ở đầu, tối đa 50 kí tự) | `UserSummary[]` (tối đa 10; mở rộng ngoài thiết kế, xem dưới) |
 | GET | /users/suggestions | | `UserSummary[]` (tối đa 5, N02) |
 | GET | /users/:username | | `Profile` |
 | GET | /users/:username/followers | `?cursor` | `CursorPage<UserSummary>` |
@@ -32,6 +33,8 @@ Chi tiết hoá mục 6.1 của [thiet-ke-v1.2.txt](thiet-ke-v1.2.txt). Kiểu d
 | PUT | /users/me/avatar | multipart, trường `avatar` | `User` |
 | POST | /follows | `{ userId }` | 201 `{ following: true }` |
 | DELETE | /follows/:userId | | `{ following: false }` |
+
+`/users/search`: khách cũng gọi được. Không phân biệt dấu, khớp đầu một từ trong tên hiển thị hoặc username: `lan`, `@lan`, `nguyen`, `Nguyễn` đều ra Lan Nguyễn, còn `an` thì không. Chỉ trả thành viên đang hoạt động (không admin, không tài khoản bị khoá), sắp theo username. `q` rỗng trả `[]`.
 
 ## Posts
 
@@ -67,6 +70,12 @@ Chi tiết hoá mục 6.1 của [thiet-ke-v1.2.txt](thiet-ke-v1.2.txt). Kiểu d
 | PATCH | /notifications/:id | | `Notification` (đã đọc) |
 | PATCH | /notifications | | `{ updated }` |
 | POST | /reports | `{ postId, reason, note? }` | 201 `Report` |
+
+Thông báo tức thời (N03, Socket.IO): client nối tới gốc server (không có `/api`), gửi `auth: { token }`. Chỉ thành viên được giữ kết nối, token sai, bị khoá hoặc là admin thì server ngắt ngay.
+
+- Sự kiện `notification`: `{ notification: Notification, unreadCount }`, gửi mỗi khi `notify()` tạo hoặc làm mới thông báo.
+- Admin khoá tài khoản hoặc đặt mật khẩu tạm thì server ngắt kết nối; client gọi lại API để biết phiên đã hết.
+- Polling `/notifications/unread-count` 30 giây vẫn giữ để dự phòng.
 
 ## Admin
 
