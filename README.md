@@ -60,7 +60,21 @@ Test e2e tự đăng ký tài khoản riêng mỗi lần chạy, chỉ cần có
 
 ## Tài khoản demo
 
-Cập nhật sau.
+Dùng trên web thật (https://travellog-rust.vercel.app) hoặc trên máy sau khi chạy `npm run seed:demo` trong `server/`.
+
+| Vai trò | Email | Mật khẩu |
+|---|---|---|
+| Thành viên | `lan@demo.travellog` (Lan Nguyễn) | `Demo12345` |
+| Thành viên | `minh@demo.travellog` (Minh Trần) | `Demo12345` |
+| Thành viên | `hoa@demo.travellog` (Hoa Lê) | `Demo12345` |
+| Thành viên | `tuan@demo.travellog` (Tuấn Phạm) | `Demo12345` |
+| Thành viên | `mai@demo.travellog` (Mai Vũ) | `Demo12345` |
+| Admin | `admin@travellog.local`, đăng nhập ở `/admin/login` | Gửi riêng cho giảng viên (repo công khai nên không ghi ở đây) |
+
+Gợi ý thử nhanh:
+
+- Mở thêm một cửa sổ ẩn danh đăng nhập người thứ hai rồi theo dõi người thứ nhất: chuông bên kia nhảy số ngay.
+- Lần đầu mở web có thể chờ 30–60 giây vì server miễn phí trên Render đang ngủ.
 
 ## Deploy
 
