@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { setSessionExpiredHandler, tokenStorage, type SessionEndReason } from '../api/client';
+import { setSessionExpiredHandler, TOKEN_KEY, tokenStorage, type SessionEndReason } from '../api/client';
 import { authApi, type Credentials } from '../api/auth';
 import { useNotificationStore } from '../stores/useNotificationStore';
 import type { AuthResponse, User } from '../types';
@@ -72,6 +72,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return () => setSessionExpiredHandler(null);
   }, [logout, navigate]);
+
+  // Tab khác đăng nhập tài khoản khác, đăng xuất hoặc đổi mật khẩu → tải lại để tab này dùng đúng token mới,
+  // không hiện người cũ mà gọi API bằng token của người mới. Không còn token thì RequireAuth tự đưa về /login.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === TOKEN_KEY || e.key === null) window.location.reload();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   const acceptAuth = useCallback((res: AuthResponse) => {
     tokenStorage.set(res.token);
