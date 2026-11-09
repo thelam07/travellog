@@ -23,6 +23,7 @@ Chi tiết hoá mục 6.1 của [thiet-ke-v1.2.txt](thiet-ke-v1.2.txt). Kiểu d
 
 | Method | URL | Body / query | Trả về |
 |---|---|---|---|
+| GET | /users/search | `?q` (bỏ `@` ở đầu, tối đa 50 kí tự) | `UserSummary[]` (tối đa 10; mở rộng ngoài thiết kế, xem dưới) |
 | GET | /users/suggestions | | `UserSummary[]` (tối đa 5, N02) |
 | GET | /users/:username | | `Profile` |
 | GET | /users/:username/followers | `?cursor` | `CursorPage<UserSummary>` |
@@ -32,6 +33,8 @@ Chi tiết hoá mục 6.1 của [thiet-ke-v1.2.txt](thiet-ke-v1.2.txt). Kiểu d
 | PUT | /users/me/avatar | multipart, trường `avatar` | `User` |
 | POST | /follows | `{ userId }` | 201 `{ following: true }` |
 | DELETE | /follows/:userId | | `{ following: false }` |
+
+`/users/search`: khách cũng gọi được. Không phân biệt dấu, khớp đầu một từ trong tên hiển thị hoặc username: `lan`, `@lan`, `nguyen`, `Nguyễn` đều ra Lan Nguyễn, còn `an` thì không. Chỉ trả thành viên đang hoạt động (không admin, không tài khoản bị khoá), sắp theo username. `q` rỗng trả `[]`.
 
 ## Posts
 

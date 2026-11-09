@@ -28,6 +28,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { FollowsService } from '../follows/follows.service';
 import { User } from './schemas/user.schema';
 import { toUser, toUserSummary } from './user.mapper';
+import { UsersService } from './users.service';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -61,7 +62,14 @@ export class UsersController {
     @InjectModel(User.name) private readonly users: Model<User>,
     private readonly follows: FollowsService,
     private readonly storage: StorageService,
+    private readonly usersService: UsersService,
   ) {}
+
+  // Tìm người dùng (mở rộng ngoài thiết kế): khách cũng tìm được, như xem trang cá nhân. Cắt q 50 kí tự cho regex gọn.
+  @Get('search')
+  search(@Query('q') q?: string) {
+    return this.usersService.search(typeof q === 'string' ? q.slice(0, 50) : '');
+  }
 
   // Tên hiển thị để trống thì hiện username (toUser).
   @Patch('me')
