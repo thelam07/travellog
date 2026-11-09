@@ -4,13 +4,17 @@ import { isValidObjectId, Model, Types } from 'mongoose';
 import { CURSOR_SORT, cursorFilter, toCursorPage } from '../common/utils/cursor';
 import { USER_SUMMARY_FIELDS } from '../users/schemas/user.schema';
 import { toUserSummary } from '../users/user.mapper';
+import { NotificationsGateway } from './notifications.gateway';
 import { Notification, NotificationType } from './schemas/notification.schema';
 
 const PAGE_SIZE = 20;
 
 @Injectable()
 export class NotificationsService {
-  constructor(@InjectModel(Notification.name) private readonly notifications: Model<Notification>) {}
+  constructor(
+    @InjectModel(Notification.name) private readonly notifications: Model<Notification>,
+    private readonly gateway: NotificationsGateway,
+  ) {}
 
   /**
    * BR08. C gọi khi thích / bình luận (kèm post), A gọi khi theo dõi.
@@ -24,16 +28,23 @@ export class NotificationsService {
       type: input.type,
       post: input.post ? new Types.ObjectId(input.post) : null,
     };
-    if (input.type === 'comment') {
-      await this.notifications.create(key);
-      return;
-    }
-    // Mongoose coi createdAt là immutable và bỏ qua khi cập nhật; overwriteImmutable để thông báo nhảy lên đầu.
-    await this.notifications.updateOne(
-      key,
-      { $set: { isRead: false, createdAt: new Date() } },
-      { upsert: true, timestamps: false, overwriteImmutable: true },
-    );
+    const doc =
+      input.type === 'comment'
+        ? await this.notifications.create(key)
+        : await this.notifications.findOneAndUpdate(
+            key,
+            { $set: { isRead: false, createdAt: new Date() } },
+            // Mongoose coi createdAt là immutable và bỏ qua khi cập nhật; overwriteImmutable để thông báo nhảy lên đầu.
+            { upsert: true, timestamps: false, overwriteImmutable: true, returnDocument: 'after' },
+          );
+    // Không chờ: lỗi gửi socket không được làm hỏng thao tác thích / bình luận / theo dõi.
+    this.push(input.recipient, String(doc!._id)).catch(() => undefined);
+  }
+
+  // N03: đẩy thông báo kèm số chưa đọc cho người nhận (like lặp lại chỉ làm mới bản cũ nên client không tự cộng được).
+  private async push(recipient: string, id: string) {
+    const [n, unread] = await Promise.all([this.withRefs(this.notifications.findById(id)).lean(), this.unreadCount(recipient)]);
+    if (n) this.gateway.emitToUser(recipient, 'notification', { notification: this.toDto(n), unreadCount: unread.count });
   }
 
   async list(userId: string, cursor?: string) {

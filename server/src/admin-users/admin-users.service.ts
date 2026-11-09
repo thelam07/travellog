@@ -4,6 +4,7 @@ import { Model, QueryFilter } from 'mongoose';
 import { AdminCreateUserDto } from '../auth/dto/auth.dto';
 import { AuthUser, Role } from '../common/auth-user';
 import { escapeRegex } from '../common/utils/text';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { User } from '../users/schemas/user.schema';
 import { toUser } from '../users/user.mapper';
 import { UsersService } from '../users/users.service';
@@ -15,6 +16,7 @@ export class AdminUsersService {
   constructor(
     @InjectModel(User.name) private readonly users: Model<User>,
     private readonly usersService: UsersService,
+    private readonly gateway: NotificationsGateway,
   ) {}
 
   // F17. Tìm theo username hoặc email (escapeRegex của B2 để kí tự đặc biệt không làm lỗi), mới tạo trước.
@@ -57,6 +59,8 @@ export class AdminUsersService {
     if (changes.isLocked !== undefined && changes.isLocked !== target.isLocked) {
       // Tuần 3: ẩn / hiện bài và bình luận của người này (BR09) khi B, C có hàm:
       // await Promise.all([this.posts.setAuthorLocked(id, changes.isLocked), this.comments.setAuthorLocked(id, changes.isLocked)]);
+      // N03: cắt kết nối socket của người bị khoá, client gọi lại API và tự đăng xuất.
+      if (changes.isLocked) this.gateway.disconnectUser(id);
     }
     return toUser(updated!);
   }
@@ -67,6 +71,7 @@ export class AdminUsersService {
       throw new NotFoundException({ code: 'NOT_FOUND', message: 'Không tìm thấy người dùng' });
     }
     await this.usersService.setPassword(id, newPassword);
+    this.gateway.disconnectUser(id);
     return { ok: true };
   }
 
