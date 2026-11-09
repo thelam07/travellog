@@ -32,8 +32,15 @@ function Dialog({ title, onClose, children }: { title: string; onClose: () => vo
 
 type CreateField = 'username' | 'email' | 'password' | 'role';
 
+interface CreateProps {
+  /** Chỉ admin gốc tạo được tài khoản quản trị (mở rộng) */
+  canGrantAdmin: boolean;
+  onClose: () => void;
+  onCreated: (u: User) => void;
+}
+
 // UC16, BR18: admin tạo được cả admin.
-function CreateUserDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (u: User) => void }) {
+function CreateUserDialog({ canGrantAdmin, onClose, onCreated }: CreateProps) {
   const [values, setValues] = useState({ username: '', email: '', password: '', role: 'member' as Role });
   const [errors, setErrors] = useState<Errors<CreateField>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -94,8 +101,11 @@ function CreateUserDialog({ onClose, onCreated }: { onClose: () => void; onCreat
           <label htmlFor="cu-role">Vai trò</label>
           <select id="cu-role" value={values.role} onChange={(e) => set('role', e.target.value as Role)}>
             <option value="member">{ROLE_LABELS.member}</option>
-            <option value="admin">{ROLE_LABELS.admin}</option>
+            <option value="admin" disabled={!canGrantAdmin}>
+              {ROLE_LABELS.admin}
+            </option>
           </select>
+          {!canGrantAdmin && <div className="field-hint">Chỉ admin gốc tạo được tài khoản quản trị</div>}
         </div>
         {formError && <div className="alert alert-error">{formError}</div>}
         <div className="form-actions end">
@@ -278,6 +288,8 @@ export default function AdminUsersPage() {
             <tbody>
               {data.items.map((u) => {
                 const isMe = u._id === me?._id;
+                // Chỉ admin gốc đổi vai trò người khác được; dòng của admin gốc không có khoá / đặt lại mật khẩu
+                const roleLocked = !me?.isOwner || u.isOwner;
                 return (
                   <tr key={u._id}>
                     <td data-label="Tài khoản">
@@ -286,6 +298,7 @@ export default function AdminUsersPage() {
                         <span>
                           <strong>{u.displayName || u.username}</strong>
                           <span className="muted small"> @{u.username}</span>
+                          {u.isOwner && <span className="badge">Admin gốc</span>}
                           {isMe && <span className="badge">bạn</span>}
                         </span>
                       </Link>
@@ -295,6 +308,14 @@ export default function AdminUsersPage() {
                       <select
                         value={u.role}
                         aria-label={`Vai trò của ${u.username}`}
+                        disabled={roleLocked}
+                        title={
+                          u.isOwner
+                            ? 'Không đổi được vai trò của admin gốc'
+                            : roleLocked
+                              ? 'Chỉ admin gốc được trao hoặc thu quyền quản trị'
+                              : undefined
+                        }
                         onChange={(e) => {
                           setPendingError(null);
                           setPending({ user: u, change: { role: e.target.value as Role } });
@@ -309,21 +330,25 @@ export default function AdminUsersPage() {
                     </td>
                     <td data-label="Ngày tạo">{formatDate(u.createdAt)}</td>
                     <td data-label="Thao tác">
-                      <div className="form-actions">
-                        <button
-                          type="button"
-                          className={`btn btn-sm ${u.isLocked ? 'btn-secondary' : 'btn-danger'}`}
-                          onClick={() => {
-                            setPendingError(null);
-                            setPending({ user: u, change: { isLocked: !u.isLocked } });
-                          }}
-                        >
-                          {u.isLocked ? 'Mở khoá' : 'Khoá'}
-                        </button>
-                        <button type="button" className="btn btn-sm btn-ghost" onClick={() => setResetting(u)}>
-                          Đặt lại mật khẩu
-                        </button>
-                      </div>
+                      {u.isOwner ? (
+                        <span className="muted small">{isMe ? 'Đổi mật khẩu ở trang “Đổi mật khẩu”' : 'Không thể thao tác'}</span>
+                      ) : (
+                        <div className="form-actions">
+                          <button
+                            type="button"
+                            className={`btn btn-sm ${u.isLocked ? 'btn-secondary' : 'btn-danger'}`}
+                            onClick={() => {
+                              setPendingError(null);
+                              setPending({ user: u, change: { isLocked: !u.isLocked } });
+                            }}
+                          >
+                            {u.isLocked ? 'Mở khoá' : 'Khoá'}
+                          </button>
+                          <button type="button" className="btn btn-sm btn-ghost" onClick={() => setResetting(u)}>
+                            Đặt lại mật khẩu
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
@@ -353,6 +378,7 @@ export default function AdminUsersPage() {
 
       {creating && (
         <CreateUserDialog
+          canGrantAdmin={Boolean(me?.isOwner)}
           onClose={() => setCreating(false)}
           onCreated={(u) => {
             setCreating(false);

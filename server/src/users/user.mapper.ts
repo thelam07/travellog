@@ -14,6 +14,7 @@ export function toUser(u: UserLike) {
     avatar: (u.avatar as Avatar | null) ?? null,
     role: u.role,
     isLocked: !!u.isLocked,
+    isOwner: !!u.isOwner,
     createdAt: u.createdAt,
   };
 }

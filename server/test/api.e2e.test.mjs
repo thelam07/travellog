@@ -264,6 +264,32 @@ describe('Quản trị tài khoản (F14, F17, F18)', () => {
     await api('PATCH', `/admin/users/${created.body._id}`, { token: admin, json: { role: 'member' } });
     assert.equal((await api('GET', '/admin/users', { token: token2 })).status, 403);
   });
+
+  test('Admin gốc (mở rộng): admin thường không đụng được admin gốc, không trao quyền admin', async () => {
+    const me = (await api('GET', '/auth/me', { token: admin })).body;
+    assert.equal(me.isOwner, true, 'tài khoản seed:admin phải là admin gốc');
+    const u = await register('admin2');
+    await api('PATCH', `/admin/users/${u.user._id}`, { token: admin, json: { role: 'admin' } });
+    const sub = (await api('POST', '/auth/admin/login', { json: { email: u.user.email, password: 'Test12345' } })).body.token;
+    assert.equal((await api('GET', '/auth/me', { token: sub })).body.isOwner, false);
+    for (const json of [{ role: 'member' }, { isLocked: true }]) {
+      const r = await api('PATCH', `/admin/users/${me._id}`, { token: sub, json });
+      assert.equal(r.status, 403);
+      assert.equal(r.body.error.code, 'OWNER_ONLY');
+    }
+    assert.equal((await api('PUT', `/admin/users/${me._id}/password`, { token: sub, json: { newPassword: 'Hack12345' } })).status, 403);
+    const other = await register('member2');
+    assert.equal((await api('PATCH', `/admin/users/${other.user._id}`, { token: sub, json: { role: 'admin' } })).status, 403);
+    const adminForm = { username: `adm3_${uid}`, email: `adm3_${uid}@test.local`, password: 'Admin12345', role: 'admin' };
+    assert.equal((await api('POST', '/admin/users', { token: sub, json: adminForm })).status, 403);
+    // Việc admin thường vẫn làm được với thành viên
+    const memberForm = { username: `tv_${uid}`, email: `tv_${uid}@test.local`, password: 'Test12345', role: 'member' };
+    assert.equal((await api('POST', '/admin/users', { token: sub, json: memberForm })).status, 201);
+    assert.equal((await api('PATCH', `/admin/users/${other.user._id}`, { token: sub, json: { isLocked: true } })).status, 200);
+    assert.equal((await api('PATCH', `/admin/users/${other.user._id}`, { token: sub, json: { isLocked: false } })).status, 200);
+    // Admin gốc thu quyền lại
+    assert.equal((await api('PATCH', `/admin/users/${u.user._id}`, { token: admin, json: { role: 'member' } })).status, 200);
+  });
 });
 
 describe('Bài viết (B4)', () => {
