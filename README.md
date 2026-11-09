@@ -44,6 +44,20 @@ npm run dev                   # http://localhost:5173 (tự chuyển /api sang s
 
 Server chạy cổng khác 3000 thì chạy client bằng `API_PROXY=http://localhost:<cổng> npm run dev`.
 
+## Kiểm thử
+
+```bash
+cd server
+npm test                      # test đơn vị (hàm chuẩn hoá chữ, StorageService…), không cần server
+
+# Test API (e2e): gọi thẳng API đang chạy để kiểm phân quyền và luật BR. Nên dùng DB riêng.
+MONGODB_URI=mongodb://localhost:27017/travellog_test PORT=3001 npm run seed:admin
+MONGODB_URI=mongodb://localhost:27017/travellog_test PORT=3001 npm start   # terminal khác, sau npm run build
+API_URL=http://localhost:3001/api ADMIN_PASSWORD=<mật khẩu admin trong .env> npm run test:e2e
+```
+
+Test e2e tự đăng ký tài khoản riêng mỗi lần chạy, chỉ cần có admin. Ai merge API mới thì thêm test vào `server/test/api.e2e.test.mjs`.
+
 ## Tài khoản demo
 
 Cập nhật sau.
