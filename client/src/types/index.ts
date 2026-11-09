@@ -25,6 +25,8 @@ export interface User extends UserSummary {
   bio: string;
   role: Role;
   isLocked: boolean;
+  /** Admin gốc (mở rộng): không ai khoá / hạ quyền được, chỉ người này trao, thu quyền admin */
+  isOwner: boolean;
   createdAt: string;
 }
 

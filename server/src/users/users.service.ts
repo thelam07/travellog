@@ -21,8 +21,12 @@ export interface NewUserInput {
 export class UsersService implements OnModuleInit {
   constructor(@InjectModel(User.name) private readonly users: Model<User>) {}
 
-  // Tài khoản tạo trước khi có searchKey: tính bù một lần lúc khởi động.
   async onModuleInit() {
+    await Promise.all([this.backfillSearchKeys(), this.ensureOwner()]);
+  }
+
+  // Tài khoản tạo trước khi có searchKey: tính bù một lần lúc khởi động.
+  private async backfillSearchKeys() {
     const missing = await this.users
       .find({ $or: [{ searchKey: { $exists: false } }, { searchKey: '' }] })
       .select('username displayName')
@@ -33,6 +37,13 @@ export class UsersService implements OnModuleInit {
         updateOne: { filter: { _id: u._id }, update: { $set: { searchKey: userSearchKey(u.displayName, u.username) } } },
       })),
     );
+  }
+
+  // DB có từ trước khi có admin gốc: admin tạo sớm nhất (thường là tài khoản seed:admin) thành admin gốc.
+  async ensureOwner() {
+    if (await this.users.exists({ isOwner: true })) return;
+    const first = await this.users.findOne({ role: 'admin' }).sort({ createdAt: 1 }).select('_id').lean();
+    if (first) await this.users.updateOne({ _id: first._id }, { isOwner: true });
   }
 
   /**

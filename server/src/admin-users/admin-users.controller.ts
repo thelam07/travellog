@@ -32,8 +32,8 @@ export class AdminUsersController {
   }
 
   @Post()
-  create(@Body() dto: AdminCreateUserDto) {
-    return this.adminUsers.create(dto);
+  create(@Body() dto: AdminCreateUserDto, @CurrentUser() admin: AuthUser) {
+    return this.adminUsers.create(dto, admin);
   }
 
   @Patch(':id')

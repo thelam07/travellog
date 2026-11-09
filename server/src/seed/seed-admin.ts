@@ -22,7 +22,9 @@ async function main() {
       console.log(`Đã có tài khoản ${email} (role = ${existing.role}), không tạo lại.`);
       return;
     }
-    await app.get(UsersService).create({ username, email, password, role: 'admin' }, { allowReserved: true });
+    const usersService = app.get(UsersService);
+    await usersService.create({ username, email, password, role: 'admin' }, { allowReserved: true });
+    await usersService.ensureOwner(); // admin đầu tiên là admin gốc
     console.log(`Đã tạo admin ${email}. Đăng nhập ở /admin/login rồi đổi mật khẩu ở /settings/password.`);
   } finally {
     await app.close();

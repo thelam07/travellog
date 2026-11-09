@@ -89,3 +89,9 @@ Thông báo tức thời (N03, Socket.IO): client nối tới gốc server (khô
 | PATCH | /admin/users/:id | `{ isLocked?, role? }` | `User` |
 | PUT | /admin/users/:id/password | `{ newPassword }` | `{ ok: true }` |
 | GET | /stats/locations | `?limit=10` | `LocationStat[]` |
+
+Admin gốc (mở rộng ngoài thiết kế): `User` có thêm `isOwner`. Admin đầu tiên (`seed:admin`, hoặc admin tạo sớm nhất khi DB có từ trước) là admin gốc, chỉ có một.
+
+- Không ai khoá, đổi vai trò hay đặt lại mật khẩu được admin gốc → 403 `OWNER_ONLY`.
+- Chỉ admin gốc được trao hoặc thu quyền admin: `PATCH /admin/users/:id` đổi `role`, hoặc `POST /admin/users` với `role: 'admin'`. Admin khác làm thì nhận 403 `OWNER_ONLY`. Gửi `role` trùng vai trò hiện tại không tính là đổi.
+- Admin thường vẫn tạo, khoá, mở khoá và đặt mật khẩu tạm cho thành viên.
