@@ -20,6 +20,9 @@ class SocketIoAdapter extends IoAdapter {
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Render đặt server sau proxy: tin header X-Forwarded-For của 1 lớp proxy để req.ip là IP người dùng,
+  // không thì mọi người bị tính chung IP của proxy và chặn dò mật khẩu (BR25) sẽ khoá cả trang.
+  app.set('trust proxy', 1);
   const config = app.get(ConfigService);
 
   // Phục vụ file tĩnh trong uploads/ qua URL /uploads/... (B3).

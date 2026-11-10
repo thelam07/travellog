@@ -1,6 +1,6 @@
 # Hợp đồng API TravelLog
 
-Chi tiết hoá mục 6.1 của [thiet-ke-v1.2.txt](thiet-ke-v1.2.txt). Kiểu dữ liệu ở [client/src/types/index.ts](../client/src/types/index.ts).
+Chi tiết hoá mục 6.1 của [thiet-ke-v1.3.txt](thiet-ke-v1.3.txt). Kiểu dữ liệu ở [client/src/types/index.ts](../client/src/types/index.ts).
 
 - Tiền tố `/api`, JSON. Server dev: `http://localhost:3000`.
 - Header: `Authorization: Bearer <token>`.
@@ -18,6 +18,8 @@ Chi tiết hoá mục 6.1 của [thiet-ke-v1.2.txt](thiet-ke-v1.2.txt). Kiểu d
 | POST | /auth/admin/login | `{ email, password }` | `AuthResponse`; không phải admin → 403 |
 | GET | /auth/me | | `User` |
 | PATCH | /auth/password | `{ currentPassword, newPassword }` | `{ token }` (token mới, token cũ hết hiệu lực) |
+
+Chặn dò mật khẩu (BR25, mở rộng): hai API đăng nhập giới hạn mỗi IP thử một email 5 lần/phút và mỗi IP 30 lần/phút, đếm cả lần đúng lẫn sai. Quá giới hạn trả 429 `TOO_MANY_REQUESTS` kèm câu báo đợi 1 phút. Các API khác (kể cả đăng ký) không bị giới hạn.
 
 ## Users, follows
 
