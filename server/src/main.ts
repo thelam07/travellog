@@ -20,9 +20,10 @@ class SocketIoAdapter extends IoAdapter {
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  // Render đặt server sau proxy: tin header X-Forwarded-For của 1 lớp proxy để req.ip là IP người dùng,
-  // không thì mọi người bị tính chung IP của proxy và chặn dò mật khẩu (BR25) sẽ khoá cả trang.
-  app.set('trust proxy', 1);
+  // Trên Render request đi qua 2 lớp proxy: Cloudflare rồi proxy của Render, X-Forwarded-For = "<IP người dùng>, <IP Cloudflare>".
+  // Tin đúng 2 lớp để req.ip là IP người dùng (chặn dò mật khẩu BR25 đếm theo IP). Tin 1 lớp thì req.ip là IP máy Cloudflare,
+  // đổi theo từng request và nhiều người dùng chung. Không dùng true: Render chỉ nối thêm vào header nên phần đầu giả mạo được.
+  app.set('trust proxy', 2);
   const config = app.get(ConfigService);
 
   // Phục vụ file tĩnh trong uploads/ qua URL /uploads/... (B3).
