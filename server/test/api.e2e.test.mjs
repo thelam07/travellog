@@ -107,6 +107,19 @@ describe('Tài khoản (F01)', () => {
     assert.equal((await api('GET', '/auth/me', { token: 'rac.rac.rac' })).status, 401);
   });
 
+  test('BR25 (mở rộng): sai 5 lần một email → lần 6 bị 429, kể cả đúng mật khẩu; email khác vẫn thử được', async () => {
+    const u = await register('brute');
+    const statuses = [];
+    for (let i = 0; i < 6; i++) {
+      statuses.push((await api('POST', '/auth/login', { json: { email: u.user.email, password: 'Sai123456' } })).status);
+    }
+    assert.deepEqual(statuses, [401, 401, 401, 401, 401, 429]);
+    const blocked = await api('POST', '/auth/login', { json: { email: u.user.email, password: 'Test12345' } });
+    assert.equal(blocked.status, 429);
+    assert.equal(blocked.body.error.code, 'TOO_MANY_REQUESTS');
+    assert.equal((await api('POST', '/auth/login', { json: { email: `khac_${uid}@test.local`, password: 'Sai123456' } })).status, 401);
+  });
+
   test('BR11 + BR19: đổi mật khẩu cần mật khẩu cũ đúng; token cũ 401, token mới dùng được', async () => {
     const u = await register('pw');
     await sleep(1100); // iat tính theo giây
