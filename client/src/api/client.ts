@@ -59,6 +59,7 @@ const STATUS_MESSAGES: Record<number, string> = {
   403: 'Bạn không có quyền thực hiện thao tác này.',
   404: 'Không tìm thấy dữ liệu.',
   409: 'Dữ liệu bị trùng.',
+  429: 'Bạn thao tác quá nhanh, vui lòng đợi một chút rồi thử lại.',
   502: 'Dịch vụ bên ngoài đang lỗi, thử lại sau.',
 };
 

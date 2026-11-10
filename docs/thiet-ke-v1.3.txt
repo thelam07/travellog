@@ -1,0 +1,429 @@
+BÀI TẬP LỚN CUỐI KỲ – LẬP TRÌNH WEB
+TÀI LIỆU PHÂN TÍCH & THIẾT KẾ
+Đề 5 – Nhật ký du lịch (mạng xã hội mini)
+Tên tạm của ứng dụng: TravelLog
+Mã nhóm: ……………
+Thành viên (3): ……………………  ·  ……………………  ·  ……………………
+Bản v1.3 – 10/11/2026 – bổ sung khi code: N03 đã làm, thêm chức năng mở rộng E01–E04, luật BR23–BR25 (xem 10, mục 10)
+Mục lục
+0. Giả định và cách dùng tài liệu
+1. Phạm vi
+1.1 Bài toán
+1.2 Danh sách chức năng
+2. Tác nhân và use case
+2.1 Tác nhân
+2.2 Use case
+3. Luật nghiệp vụ
+4. Entity và quan hệ
+4.1 Danh sách entity
+4.2 Sơ đồ ERD
+4.3 Quan hệ và lý do chọn tham chiếu hay lồng
+5. Thiết kế cơ sở dữ liệu MongoDB
+5.1 Các collection
+5.2 Truy vấn chính
+6. Thiết kế REST API
+6.1 Danh sách endpoint
+6.2 Ma trận phân quyền
+6.3 Guard, Pipe, Filter (NestJS)
+7. Sơ đồ route và wireframe
+7.1 Sơ đồ route React
+7.2 Wireframe
+8. Kiến trúc front-end
+8.1 Dữ liệu dùng chung: Context hay Zustand
+8.2 Custom hook (tối thiểu 2, dự kiến 6)
+8.3 Component dự kiến (yêu cầu ≥ 15)
+8.4 Cấu trúc thư mục
+9. Phân công và kế hoạch
+9.1 Phân công (3 người)
+9.2 Kế hoạch 5 tuần
+9.3 Quy ước làm việc
+10. Quyết định đã chốt
+10.1 Lưu ý khi dùng Google Places
+10.2 Vận hành tối thiểu: từ cài đặt đến dùng được
+(Mở bằng Word: chuột phải vào mục lục → Update Field để cập nhật số trang.)
+0. Giả định và cách dùng tài liệu
+| Giả định của bản nháp (nhóm sửa nếu khác): • Nhóm 3 người, thời gian khoảng 5 tuần. • TypeScript toàn bộ, cả client và server (đề cho cộng điểm TypeScript); kiểu dữ liệu trả về của API khai báo ở client/src/types; server dùng schema Mongoose + DTO riêng. Hai bên không import chéo (deploy tách Vercel / Render), đối chiếu với nhau theo bảng endpoint mục 6. • Backend: NestJS (chạy trên Express qua @nestjs/platform-express) + Mongoose. Front-end: React + React Router, Zustand thay Redux Toolkit. Hai thay đổi này đã được giảng viên duyệt. • Có deploy: Vercel (client), Render (server), MongoDB Atlas. Ảnh lưu trên Cloudinary vì ổ đĩa của Render bị xoá khi khởi động lại. Server chỉ bật CORS cho địa chỉ client (CLIENT_URL trong .env). Render bản miễn phí ngủ sau 15 phút không có request, lần gọi đầu mất khoảng 50 giây: mở server trước khi demo. • Hai vai trò có tài khoản: member, admin. Khách là người chưa đăng nhập. |
+Tài liệu đi theo trình tự của một quy trình phân tích thiết kế phần mềm rút gọn. Mỗi bước chốt xong mới sang bước sau; các mục của tài liệu này về sau được đưa thẳng vào quyển báo cáo (cột cuối của bảng).
+| Bước | Sản phẩm | Trả lời câu hỏi | Mục báo cáo |
+| 1. Phạm vi | Danh sách chức năng: bắt buộc / nâng cao / không làm | Làm đến đâu thì dừng? | a |
+| 2. Tác nhân & use case | Bảng vai trò → hành động, luồng chính, ngoại lệ | Ai làm được gì? | a, d |
+| 3. Luật nghiệp vụ | Danh sách quy tắc hệ thống phải chặn / tính | Hệ thống phải chặn gì? | e, h |
+| 4. Entity & quan hệ | Sơ đồ ERD | Dữ liệu gồm những gì? | c |
+| 5. Thiết kế MongoDB | Collection, trường, index, tham chiếu hay lồng | Lưu thế nào cho truy vấn tốt? | c |
+| 6. Thiết kế API | Bảng endpoint + ma trận phân quyền | Client và server nói chuyện ra sao? | d |
+| 7. Route & wireframe | Cây route React, khung màn hình (máy tính + điện thoại) | Người dùng thấy gì, đi đâu? | b, f |
+| 8. Kiến trúc front-end | Context / Zustand, custom hook, danh sách component | Code tổ chức ra sao? | b, e |
+| 9. Phân công & kế hoạch | Ai làm gì, mốc tuần, quy ước Git | Đến hạn có xong không? | g |
+1. Phạm vi
+1.1 Bài toán
+TravelLog là mạng xã hội nhỏ cho người thích đi du lịch. Thành viên đăng bài kể về chuyến đi (nhiều ảnh, địa điểm, ngày đi, chi phí), chọn ai được xem, theo dõi nhau, thích và bình luận. Khách chưa đăng nhập xem được bài công khai và tìm theo địa điểm hoặc hashtag. Admin xử lý bài bị báo cáo, khoá tài khoản vi phạm và xem địa điểm được nhắc đến nhiều nhất.
+1.2 Danh sách chức năng
+| Mã | Chức năng | Vai trò | Mức |
+| F01 | Đăng ký tài khoản thành viên | Khách | Bắt buộc |
+| F01b | Đăng nhập, đăng xuất (JWT hạn 1 ngày) | Khách → TV | Bắt buộc |
+| F01c | Đăng nhập trang quản trị (/admin/login, chỉ nhận tài khoản admin) | Admin | Bắt buộc |
+| F01d | Đổi mật khẩu | TV, Admin | Bắt buộc |
+| F02 | Xem danh sách bài công khai, xem chi tiết bài | Khách, TV | Bắt buộc |
+| F03 | Tìm bài theo địa điểm hoặc hashtag, có phân trang | Khách, TV | Bắt buộc |
+| F04 | Xem trang cá nhân của thành viên | Khách, TV | Bắt buộc |
+| F05 | Đăng / sửa / xoá bài: tiêu đề, nội dung, tối đa 6 ảnh, địa điểm, ngày đi, chi phí, chế độ Công khai / Chỉ người theo dõi | TV (chủ bài) | Bắt buộc |
+| F06 | Thích / bỏ thích (cập nhật giao diện ngay, lỗi thì hoàn tác) | TV | Bắt buộc |
+| F07 | Bình luận, trả lời bình luận 1 cấp, xoá bình luận | TV | Bắt buộc |
+| F08 | Theo dõi / bỏ theo dõi | TV | Bắt buộc |
+| F09 | Bảng tin: bài của người mình theo dõi, mới nhất trước, cuộn vô hạn | TV | Bắt buộc |
+| F10 | Sửa trang cá nhân và ảnh đại diện | TV | Bắt buộc |
+| F11 | Thông báo khi có người thích, bình luận, theo dõi; số chưa đọc tự cập nhật 30 giây | TV | Bắt buộc |
+| F12 | Báo cáo bài viết vi phạm | TV | Bắt buộc (để admin có việc xử lý) |
+| F13 | Xử lý báo cáo: ẩn bài hoặc bỏ qua | Admin | Bắt buộc |
+| F14 | Khoá / mở khoá tài khoản | Admin | Bắt buộc |
+| F15 | Thống kê địa điểm được nhắc đến nhiều nhất (Aggregation) | Admin | Bắt buộc |
+| F16 | Giao diện sáng / tối | Tất cả | Bắt buộc (yêu cầu chung) |
+| F17 | Quản lý tài khoản: xem danh sách, tạo tài khoản member hoặc admin, đổi vai trò, đặt lại mật khẩu | Admin | Bắt buộc (vận hành) |
+| F18 | Khởi tạo admin đầu tiên bằng script (email, mật khẩu lấy từ .env) | Người cài đặt | Bắt buộc (vận hành) |
+| N01 | Bản đồ Leaflet đánh dấu các nơi đã đi trên trang cá nhân | Khách, TV | Nâng cao |
+| N02 | Gợi ý người nên theo dõi | TV | Nâng cao |
+| N03 | Thông báo thời gian thực bằng Socket.IO | TV | Nâng cao |
+| N04 | Deploy Vercel + Render + Atlas | — | Nâng cao |
+| E01 | Tìm thành viên theo tên hiển thị hoặc username, không phân biệt dấu (gõ “@lan” ở ô tìm kiếm) | Khách, TV | Mở rộng |
+| E02 | Admin gốc: chỉ admin đầu tiên được trao / thu quyền quản trị; không ai khoá, hạ quyền hay đặt lại mật khẩu của admin gốc | Admin | Mở rộng |
+| E03 | Đồng bộ đăng nhập giữa các tab: tab khác đăng nhập tài khoản khác hoặc đăng xuất thì tab đang mở tự tải lại | Tất cả | Mở rộng |
+| E04 | Chặn dò mật khẩu: giới hạn số lần đăng nhập mỗi phút | Khách, Admin | Mở rộng |
+| X01 | Nhắn tin riêng, chia sẻ bài, story, video, đăng nhập Google | — | Không làm |
+2. Tác nhân và use case
+2.1 Tác nhân
+| Tác nhân | Mô tả | Hệ thống nhận diện bằng |
+| Khách | Người chưa đăng nhập | Không gửi token |
+| Thành viên (member) | Người đã đăng ký và đăng nhập | JWT hợp lệ, role = member |
+| Admin | Người quản trị. Admin đầu tiên tạo bằng script khởi tạo; các admin sau do admin tạo trong trang quản trị. Không đăng ký admin qua trang công khai. | JWT hợp lệ, role = admin |
+Chủ sở hữu (chủ bài, chủ bình luận) không phải là vai trò riêng mà là quan hệ giữa người dùng và dữ liệu. API kiểm tra bằng cách so author của bản ghi với người đang gọi.
+2.2 Use case
+| Mã | Use case | Tác nhân | Luồng chính | Ngoại lệ (mã lỗi) |
+| UC01 | Đăng ký | Khách | Nhập username, email, mật khẩu → tạo tài khoản → đăng nhập luôn | Trùng email/username (409); dữ liệu sai (400) |
+| UC02 | Đăng nhập / đăng xuất | Khách | Nhập email + mật khẩu → nhận JWT hạn 1 ngày → về bảng tin. Đăng xuất: xoá token ở client | Sai thông tin (401); tài khoản bị khoá (403); tài khoản admin phải đăng nhập ở /admin/login (403) |
+| UC02b | Đăng nhập quản trị | Admin | Mở /admin/login → nhập email + mật khẩu → vào /admin | Không phải admin (403); sai thông tin (401) |
+| UC02c | Đổi mật khẩu | TV, Admin | Nhập mật khẩu cũ + mật khẩu mới (2 lần) | Sai mật khẩu cũ (400); mật khẩu mới yếu (400) |
+| UC03 | Xem bảng tin | TV | Mở trang chủ → tải 10 bài → cuộn xuống tải thêm | Hết bài → hiện “Bạn đã xem hết” |
+| UC04 | Đăng bài | TV | Điền form, chọn ảnh (xem trước) → gửi → chuyển tới trang bài vừa đăng | Thiếu trường, quá 6 ảnh, sai định dạng, ảnh > 5 MB (400) |
+| UC05 | Sửa / xoá bài | Chủ bài | Mở bài → Sửa (đổi chữ, thêm/bớt ảnh) hoặc Xoá → xác nhận | Không phải chủ bài (403); bài không tồn tại (404); tổng ảnh sau khi sửa > 6 (400) |
+| UC06 | Thích / bỏ thích | TV | Bấm Thích → số tăng ngay → gọi API | API lỗi → hoàn tác; đã thích rồi (409) |
+| UC07 | Bình luận / trả lời | TV | Viết bình luận hoặc bấm Trả lời dưới một bình luận | Bài không xem được (404); nội dung rỗng (400) |
+| UC08 | Theo dõi / bỏ theo dõi | TV | Bấm Theo dõi trên trang cá nhân hoặc bài viết | Tự theo dõi mình (400); đã theo dõi (409) |
+| UC09 | Xem thông báo | TV | Bấm chuông → danh sách → đánh dấu đã đọc | — |
+| UC10 | Tìm kiếm | Khách, TV | Gõ địa điểm hoặc #hashtag (có debounce) → kết quả phân trang | Không có kết quả → trạng thái rỗng |
+| UC11 | Sửa hồ sơ | TV | Đổi tên hiển thị, giới thiệu, ảnh đại diện | Ảnh sai định dạng / quá lớn (400) |
+| UC12 | Báo cáo bài | TV | Bấm Báo cáo → chọn lý do → gửi | Đã báo cáo bài này (409) |
+| UC13 | Xử lý báo cáo | Admin | Xem danh sách chờ xử lý → Ẩn bài hoặc Bỏ qua (mọi báo cáo chờ của cùng bài nhận cùng kết quả); ẩn nhầm thì Bỏ ẩn | Không phải admin (403) |
+| UC14 | Khoá / mở khoá tài khoản | Admin | Tìm người dùng → Khoá / Mở khoá | Khoá chính mình (400) |
+| UC15 | Xem thống kê địa điểm | Admin | Mở trang thống kê → top 10 địa điểm | — |
+| UC16 | Tạo tài khoản | Admin | Trang Tài khoản → Tạo mới → nhập username, email, mật khẩu tạm, chọn vai trò member/admin | Trùng email/username (409); dữ liệu sai (400) |
+| UC17 | Đổi vai trò | Admin | Chọn người dùng → đổi member ↔ admin | Tự hạ quyền chính mình hoặc hạ admin cuối cùng (400) |
+| UC18 | Đặt lại mật khẩu | Admin | Người dùng quên mật khẩu báo admin → admin đặt mật khẩu tạm → báo lại người dùng; người dùng đổi sau khi đăng nhập | — |
+3. Luật nghiệp vụ
+Đây là phần dễ mất điểm nhất. Mỗi luật phải được kiểm tra ở server, không chỉ ẩn nút trên giao diện.
+| Mã | Luật | Kiểm tra ở đâu |
+| BR01 | Bài “Chỉ người theo dõi” chỉ trả về cho tác giả, người đang theo dõi tác giả và admin. Áp dụng cho mọi API trả bài: bảng tin, danh sách, tìm kiếm, trang cá nhân, chi tiết bài, bình luận của bài, thích bài. Người không có quyền gọi thẳng API chi tiết thì nhận 404. | PostsService.visibilityFilter(viewer) dùng chung + PostAccessGuard |
+| BR02 | Mỗi người chỉ thích một bài một lần. likeCount tăng/giảm bằng $inc. | Unique index likes(user, post); bắt lỗi trùng → 409 |
+| BR03 | Bình luận trả lời chỉ 1 cấp: nếu parent đã là một trả lời thì gắn vào bình luận gốc của nó. | Controller tạo bình luận |
+| BR04 | Không tự theo dõi chính mình, không theo dõi hai lần. | DTO (class-validator) + unique index follows(follower, following) |
+| BR05 | Mỗi bài tối đa 6 ảnh; chỉ nhận JPG, PNG, WebP; mỗi ảnh ≤ 5 MB. | FilesInterceptor (Multer) + ParseFilePipe kiểm định dạng, dung lượng |
+| BR06 | Chỉ chủ bài được sửa/xoá bài. Chủ bình luận hoặc chủ bài được xoá bình luận. Admin được ẩn bài. | OwnershipGuard / RolesGuard |
+| BR07 | Xoá bài thì xoá kèm likes, comments, notifications, reports liên quan và ảnh trên Cloudinary. | Service xoá bài |
+| BR08 | Tạo thông báo khi người khác thích, bình luận, theo dõi. Không tạo khi tự tương tác với bài của mình; bỏ thích không tạo thông báo. Thích hoặc theo dõi lại sau khi bỏ không tạo thông báo trùng: đã có thông báo cùng (actor, type, post) thì chỉ cập nhật createdAt và đặt lại isRead = false. | Service notify() (updateOne với upsert cho like, follow) |
+| BR09 | Tài khoản bị khoá không đăng nhập được; token cũ còn hạn cũng bị từ chối (403). Bài và bình luận của họ bị ẩn khỏi bảng tin, tìm kiếm, trang cá nhân, chi tiết bài và danh sách bình luận (chỉ admin còn thấy); mở khoá thì hiện lại. | JwtAuthGuard kiểm isLocked; khi khoá/mở khoá: posts.updateMany và comments.updateMany({ author }, { authorLocked }); bộ lọc quyền xem và truy vấn bình luận thêm authorLocked: false |
+| BR10 | Bài bị admin ẩn (status = hidden) không hiện với ai trừ tác giả và admin; bình luận và thích của bài đó cũng trả 404 với người khác (các route /api/posts/:id/... đều qua PostAccessGuard). | Cùng bộ lọc với BR01 |
+| BR11 | JWT chỉ chứa userId và role, hạn 1 ngày; không chứa email, mật khẩu. Mật khẩu băm bằng bcrypt. Mỗi request, quyền được tính theo role đọc lại từ DB, không tin role trong token (đổi vai trò có hiệu lực ngay). Token phát hành trước users.passwordChangedAt bị từ chối (401), nên đổi hoặc đặt lại mật khẩu sẽ đăng xuất các phiên cũ. | Auth service, JwtStrategy.validate |
+| BR12 | Bảng tin gồm bài của người mình theo dõi và của chính mình, mới nhất trước, 10 bài mỗi lần tải, phân trang bằng con trỏ (cursor) để không lặp hay sót bài khi có bài mới đăng trong lúc cuộn. | GET /api/feed?cursor= |
+| BR13 | Hashtag được tách từ nội dung (#abc) ở server, lưu chữ thường. | Pre-save hook của Post |
+| BR14 | Mỗi người báo cáo một bài một lần. | Unique index reports(post, reporter) |
+| BR15 | Khi sửa bài được thêm và bớt ảnh: client gửi danh sách ảnh giữ lại (keepImageIds) + ảnh mới; tổng ≤ 6; ảnh bị bỏ được xoá khỏi Cloudinary sau khi lưu thành công. | PostsService.update + FilesInterceptor |
+| BR16 | Địa điểm nhập tay hoặc chọn từ gợi ý Google Places. Chọn từ gợi ý thì lưu placeId và toạ độ. Mọi địa điểm đều có nameKey = tên chữ thường, bỏ dấu, gộp khoảng trắng, để thống kê không bị tách “Hội An” và “hoi an”. | Pre-save hook của Post; thống kê gom theo placeId, không có thì theo nameKey; tìm kiếm so trên nameKey (5.2) |
+| BR17 | Hệ thống luôn còn ít nhất 1 admin đang hoạt động: admin không tự khoá, không tự hạ quyền, không hạ hoặc khoá admin cuối cùng. | UsersService (đếm admin trước khi đổi) |
+| BR18 | Đăng ký công khai luôn tạo role = member; trường role gửi kèm bị bỏ qua. Chỉ admin tạo được admin. | RegisterDto không có trường role; ValidationPipe whitelist |
+| BR19 | Mật khẩu ≥ 8 kí tự, có chữ và số. Đổi mật khẩu phải nhập đúng mật khẩu cũ. | DTO + AuthService |
+| BR20 | Tài khoản admin chỉ dùng để quản trị: đăng nhập ở /admin/login (/api/auth/login trả 403 với admin); xem được mọi bài, bình luận, trang cá nhân nhưng không đăng bài, thích, bình luận, theo dõi, báo cáo. | @Roles('member') trên các API tương tác → 403; giao diện ẩn nút với admin |
+| BR21 | Xử lý một báo cáo thì mọi báo cáo pending của cùng bài nhận cùng kết quả (resolved hoặc rejected). Admin bỏ ẩn được bài bị ẩn nhầm. | ReportsService.handle: reports.updateMany({ post, status: pending }); PATCH /api/admin/posts/:id |
+| BR22 | Xoá bình luận gốc thì xoá kèm các trả lời của nó; commentCount của bài giảm bằng 1 + số trả lời bị xoá. Xoá một trả lời chỉ giảm 1. | CommentsService.remove: deleteMany({ $or: [{ _id }, { parent: _id }] }), $inc theo deletedCount |
+| BR23 | Tìm thành viên (E01): so trên searchKey = tên hiển thị + username đã chuẩn hoá như nameKey (chữ thường, bỏ dấu); khớp đầu một từ (“nguyen” ra “Lan Nguyễn”, “an” thì không); bỏ “@” ở đầu, escape regex, cắt chuỗi tìm 50 kí tự; không trả admin và tài khoản bị khoá; tối đa 10 kết quả. | UsersService.search; hook pre(save / updateOne / findOneAndUpdate) tự tính searchKey, tính bù khi khởi động |
+| BR24 | Admin gốc (E02): chỉ có một admin gốc là admin đầu tiên (seed:admin; DB có sẵn thì admin tạo sớm nhất). Không ai khoá, đổi vai trò, đặt lại mật khẩu của admin gốc. Chỉ admin gốc được đổi vai trò người khác hoặc tạo tài khoản admin; admin thường vẫn quản lý thành viên. Vi phạm → 403 OWNER_ONLY. BR17 vẫn giữ. | AdminUsersService (isOwner đọc lại từ DB mỗi lần); UsersService.ensureOwner |
+| BR25 | Đăng nhập (/api/auth/login và /api/auth/admin/login): mỗi IP thử một email tối đa 5 lần mỗi phút, mỗi IP tối đa 30 lần mỗi phút, đếm cả lần đúng lẫn sai; quá giới hạn trả 429 kèm thông báo đợi 1 phút. | ThrottlerGuard (@nestjs/throttler) gắn trên 2 route đăng nhập; trust proxy để lấy đúng IP sau proxy của Render |
+4. Entity và quan hệ
+4.1 Danh sách entity
+| Entity | Ý nghĩa | Collection |
+| Người dùng | Tài khoản thành viên hoặc admin | users |
+| Bài viết | Bài kể về một chuyến đi, chứa ảnh và địa điểm | posts |
+| Ảnh | Ảnh thuộc một bài (tối đa 6) | lồng trong posts |
+| Địa điểm | Tên, placeId Google (nếu chọn từ gợi ý), toạ độ, khoá chuẩn hoá | lồng trong posts |
+| Bình luận | Bình luận hoặc trả lời 1 cấp của một bài | comments |
+| Lượt thích | Người dùng thích bài viết | likes |
+| Theo dõi | Người dùng theo dõi người dùng khác | follows |
+| Thông báo | Báo cho người nhận khi có tương tác | notifications |
+| Báo cáo | Thành viên báo cáo bài vi phạm | reports |
+4.2 Sơ đồ ERD
+Hình 1. Sơ đồ entity – quan hệ (7 collection)
+4.3 Quan hệ và lý do chọn tham chiếu hay lồng
+| Quan hệ | Kiểu | Cách lưu | Lý do |
+| Người dùng – Bài viết | 1 – n | Tham chiếu posts.author | Bài được truy vấn độc lập (bảng tin, tìm kiếm) |
+| Người dùng – Người dùng (theo dõi) | n – n | Collection follows riêng | Cần đếm, phân trang danh sách, unique; mảng trong users sẽ phình không giới hạn |
+| Người dùng – Bài viết (thích) | n – n | Collection likes riêng + likeCount trên posts | Unique index chặn thích 2 lần; likeCount để không phải đếm mỗi lần hiện bài |
+| Bài viết – Bình luận | 1 – n | Collection comments riêng | Số lượng không giới hạn, cần phân trang và ẩn từng cái |
+| Bình luận – Trả lời | 1 – n | Tham chiếu comments.parent | Chỉ 1 cấp nên một trường parent là đủ |
+| Bài viết – Ảnh | 1 – n (≤ 6) | Mảng lồng posts.images | Số lượng nhỏ, luôn đọc cùng bài, không dùng riêng |
+| Bài viết – Địa điểm | 1 – 1 | Object lồng posts.location | Luôn đi kèm bài; thống kê bằng $group trên placeId hoặc nameKey |
+| Người dùng – Thông báo | 1 – n | Tham chiếu notifications.recipient | Phân trang, đếm chưa đọc |
+| Bài viết – Báo cáo | 1 – n | Tham chiếu reports.post | Admin xử lý độc lập với bài |
+5. Thiết kế cơ sở dữ liệu MongoDB
+5.1 Các collection
+users
+| Trường | Kiểu | Ràng buộc / ghi chú |
+| username | String | Bắt buộc, unique, 3–30 kí tự, a-z 0-9 _ |
+| email | String | Bắt buộc, unique, chữ thường |
+| passwordHash | String | bcrypt; không bao giờ trả về client (select: false) |
+| displayName, bio | String | bio ≤ 200 kí tự |
+| avatar | { url, publicId } | Ảnh trên Cloudinary |
+| role | String | member | admin, mặc định member |
+| isLocked | Boolean | Mặc định false |
+| passwordChangedAt | Date | Cập nhật khi đổi hoặc đặt lại mật khẩu; token có iat trước mốc này bị từ chối (BR11) |
+| searchKey | String | Chuẩn hoá từ displayName + username, hook tự tính; select: false, không trả về client (BR23) |
+| isOwner | Boolean | Mặc định false; true với admin gốc, chỉ một người (BR24) |
+| createdAt, updatedAt | Date | timestamps |
+Index: username (unique), email (unique), searchKey
+posts
+| Trường | Kiểu | Ràng buộc / ghi chú |
+| author | ObjectId → users | Bắt buộc |
+| title | String | 5–120 kí tự |
+| content | String | Bắt buộc, ≤ 5000 kí tự |
+| images | [{ url, publicId, width, height }] | 0–6 phần tử |
+| location | { name, nameKey, placeId, address, lat, lng } | name bắt buộc (nhập tay hoặc từ Google Places); nameKey tự sinh; placeId, address, lat, lng có khi chọn từ gợi ý (lat/lng dùng cho bản đồ) |
+| authorLocked | Boolean | Mặc định false; bật khi admin khoá tác giả (BR09) |
+| hashtags | [String] | Tách tự động từ content, chữ thường |
+| tripDate | Date | Không ở tương lai |
+| cost | Number | ≥ 0, đơn vị đồng |
+| visibility | String | public | followers |
+| status | String | active | hidden (admin ẩn) |
+| likeCount, commentCount | Number | Mặc định 0, cập nhật bằng $inc |
+Index: { author, createdAt: -1, _id: -1 } cho bảng tin (cursor) và trang cá nhân; { hashtags: 1 }; { 'location.nameKey': 1 }; { 'location.placeId': 1 }; { createdAt: -1, _id: -1 }
+comments
+| Trường | Kiểu | Ràng buộc / ghi chú |
+| post | ObjectId → posts | Bắt buộc |
+| author | ObjectId → users | Bắt buộc |
+| parent | ObjectId → comments | null | null = bình luận gốc |
+| content | String | 1–1000 kí tự |
+| authorLocked | Boolean | Mặc định false; bật khi admin khoá tác giả (BR09) |
+Index: { post, parent, createdAt }
+likes
+| Trường | Kiểu | Ràng buộc / ghi chú |
+| user | ObjectId → users | Bắt buộc |
+| post | ObjectId → posts | Bắt buộc |
+Index: { user, post } unique
+follows
+| Trường | Kiểu | Ràng buộc / ghi chú |
+| follower | ObjectId → users | Người đi theo dõi |
+| following | ObjectId → users | Người được theo dõi; khác follower |
+Index: { follower, following } unique; { following }
+notifications
+| Trường | Kiểu | Ràng buộc / ghi chú |
+| recipient | ObjectId → users | Người nhận |
+| actor | ObjectId → users | Người gây ra |
+| type | String | like | comment | follow |
+| post | ObjectId → posts | null | null với type = follow |
+| isRead | Boolean | Mặc định false |
+Index: { recipient, isRead, createdAt: -1 }
+reports
+| Trường | Kiểu | Ràng buộc / ghi chú |
+| post | ObjectId → posts | Bắt buộc |
+| reporter | ObjectId → users | Bắt buộc |
+| reason | String | spam | offensive | false_info | other (giao diện hiển thị tiếng Việt: Spam, Nội dung phản cảm, Sai sự thật, Khác) |
+| note | String | Mô tả thêm, ≤ 500 kí tự |
+| status | String | pending | resolved | rejected |
+| handledBy | ObjectId → users | null | Admin đã xử lý |
+Index: { post, reporter } unique; { status, createdAt: -1 }
+5.2 Truy vấn chính
+| Nghiệp vụ | Truy vấn (tóm tắt) | Toán tử dùng |
+| Bảng tin (cursor) | followingIds = follows.find({ follower: me }); posts.find({ author: { $in: [...followingIds, me] }, status: 'active', authorLocked: false, $or: [ { createdAt: { $lt: c.t } }, { createdAt: c.t, _id: { $lt: c.id } } ] }).sort({ createdAt: -1, _id: -1 }).limit(11) — lấy 11 để biết còn bài không; nextCursor = (createdAt, _id) của bài thứ 10, mã hoá base64 | $in, $lt, $or, sort, limit |
+| Tìm theo địa điểm / hashtag | key = normalize(q) (chữ thường, bỏ dấu, gộp khoảng trắng – cùng hàm sinh nameKey), escape kí tự đặc biệt của regex; posts.find({ $and: [ { $or: [{ 'location.nameKey': { $regex: escapeRegex(key) } }, { hashtags: { $in: [tag] } }] }, visibilityFilter(viewer) ] }). Gõ “hoi an” hay “Hội An” đều ra cùng kết quả; chuỗi như “a(b” không làm lỗi truy vấn. Regex không neo ^ (để tìm “an” ra “Hội An”) nên không dùng được index, Mongo quét theo bộ lọc khác trước; chấp nhận với quy mô bài tập. | $regex, $in, $or |
+| Bộ lọc quyền xem (BR01) | { status: 'active', authorLocked: false, $or: [ { visibility: 'public' }, { author: me }, { author: { $in: followingIds } } ] } | $or, $in |
+| Lọc chi phí | { cost: { $gte: min, $lte: max } } | $gte, $lte |
+| Thống kê địa điểm (Aggregation) | posts.aggregate([ { $match: { status: 'active', authorLocked: false } }, { $sort: { createdAt: -1 } }, { $group: { _id: { $ifNull: ['$location.placeId', '$location.nameKey'] }, name: { $first: '$location.name' }, count: { $sum: 1 }, likes: { $sum: '$likeCount' } } }, { $sort: { count: -1 } }, { $limit: 10 } ]) — $sort trước $group để name là cách viết mới nhất của địa điểm | $match, $group, $sort |
+| Đếm thông báo chưa đọc | notifications.countDocuments({ recipient: me, isRead: false }) | — |
+6. Thiết kế REST API
+Tiền tố chung /api. Dữ liệu trả về JSON. Lỗi trả về dạng { error: { code, message, details } } qua một Exception Filter toàn cục (thay middleware lỗi của Express). Hai kiểu phân trang ở server: danh sách cuộn vô hạn (bảng tin, khám phá, bình luận, thông báo) dùng con trỏ, trả { items, nextCursor, hasMore }; bảng quản trị dùng số trang, trả { items, page, limit, total }. Quy ước route người dùng: API công khai định danh bằng username (/api/users/:username/...); API quản trị định danh bằng _id và nằm dưới /api/admin/users (AdminUsersController gắn RolesGuard cho cả controller). Route /api/users/me phải khai báo trước /api/users/:username trong controller; username “me” và “admin” nằm trong danh sách cấm khi đăng ký.
+6.1 Danh sách endpoint
+| Method | URL | Vai trò | Mô tả | Mã trả về |
+| POST | /api/auth/register | Khách | Đăng ký | 201, 400, 409 |
+| POST | /api/auth/login | Khách | Đăng nhập, trả JWT | 200, 400, 401, 403, 429 |
+| POST | /api/auth/admin/login | Admin | Đăng nhập trang quản trị (không phải admin → 403) | 200, 400, 401, 403, 429 |
+| GET | /api/auth/me | TV, Admin | Thông tin người đang đăng nhập | 200, 401 |
+| PATCH | /api/auth/password | TV, Admin | Đổi mật khẩu { currentPassword, newPassword } | 200, 400, 401 |
+| GET | /api/users/:username | Tất cả | Hồ sơ + số bài, số người theo dõi | 200, 404 |
+| PATCH | /api/users/me | TV | Sửa hồ sơ | 200, 400, 401 |
+| PUT | /api/users/me/avatar | TV | Đổi ảnh đại diện (multipart) | 200, 400, 401 |
+| GET | /api/users/search?q= | Tất cả | Tìm thành viên (E01, BR23) | 200 |
+| GET | /api/users/:username/followers /api/users/:username/following | Tất cả | Danh sách người theo dõi / đang theo dõi | 200, 404 |
+| POST | /api/follows | TV | Theo dõi { userId } | 201, 400, 404, 409 |
+| DELETE | /api/follows/:userId | TV | Bỏ theo dõi | 200, 404 |
+| GET | /api/posts?q=&tag=&author=&minCost=&maxCost=&cursor= | Tất cả | Danh sách / tìm kiếm (đã lọc quyền xem, ẩn bài tài khoản bị khoá) | 200, 400 |
+| GET | /api/feed?cursor=&limit=10 | TV | Bảng tin, phân trang bằng con trỏ | 200, 400 (cursor sai), 401 |
+| GET | /api/posts/:id | Tất cả* | Chi tiết bài (*theo BR01) | 200, 404 |
+| POST | /api/posts | TV | Tạo bài (multipart, ≤ 6 ảnh) | 201, 400, 401 |
+| PATCH | /api/posts/:id | Chủ bài | Sửa bài (multipart: trường chữ + keepImageIds[] + ảnh mới; location gửi dạng chuỗi JSON) | 200, 400, 401, 403, 404 |
+| GET | /api/places/autocomplete?q= | TV | Gợi ý địa điểm (server gọi Google Places, giấu API key) | 200, 400, 401, 502 |
+| GET | /api/places/:placeId | TV | Lấy tên, địa chỉ, toạ độ của địa điểm đã chọn | 200, 401, 404, 502 |
+| DELETE | /api/posts/:id | Chủ bài, Admin | Xoá bài và dữ liệu liên quan | 200, 401, 403, 404 |
+| POST | /api/posts/:id/likes | TV | Thích | 201, 401, 404, 409 |
+| DELETE | /api/posts/:id/likes | TV | Bỏ thích | 200, 401, 404 |
+| GET | /api/posts/:id/comments?cursor= | Tất cả* | Bình luận gốc (cursor, 10 mỗi lần), mỗi bình luận kèm toàn bộ trả lời (chỉ 1 cấp); bỏ bình luận của tài khoản bị khoá | 200, 404 |
+| POST | /api/posts/:id/comments | TV | Bình luận { content, parentId? } | 201, 400, 401, 404 |
+| DELETE | /api/comments/:id | Chủ BL, chủ bài, Admin | Xoá bình luận | 200, 401, 403, 404 |
+| GET | /api/notifications?cursor= | TV | Danh sách thông báo | 200, 401 |
+| GET | /api/notifications/unread-count | TV | Số chưa đọc (polling 30 s) | 200, 401 |
+| PATCH | /api/notifications/:id | TV (người nhận) | Đánh dấu đã đọc | 200, 401, 403, 404 |
+| PATCH | /api/notifications | TV | Đánh dấu tất cả đã đọc | 200, 401 |
+| POST | /api/reports | TV | Báo cáo bài { postId, reason, note } | 201, 400, 401, 404, 409 |
+| GET | /api/reports?status=&page= | Admin | Danh sách báo cáo | 200, 401, 403 |
+| PATCH | /api/reports/:id | Admin | Xử lý { status, hidePost }; áp cho mọi báo cáo pending của cùng bài (BR21) | 200, 400, 401, 403, 404 |
+| PATCH | /api/admin/posts/:id | Admin | Ẩn / bỏ ẩn bài { status: active | hidden } | 200, 400, 401, 403, 404 |
+| GET | /api/admin/users?q=&page= | Admin | Tìm người dùng | 200, 401, 403 |
+| POST | /api/admin/users | Admin | Tạo tài khoản { username, email, password, role }; tạo admin chỉ admin gốc (BR24) | 201, 400, 401, 403, 409 |
+| PATCH | /api/admin/users/:id | Admin | Khoá / mở khoá, đổi vai trò { isLocked?, role? }; đổi vai trò chỉ admin gốc, không đụng được admin gốc (BR24) | 200, 400, 401, 403, 404 |
+| PUT | /api/admin/users/:id/password | Admin | Đặt lại mật khẩu tạm { newPassword }; không áp cho admin gốc (BR24) | 200, 400, 401, 403, 404 |
+| GET | /api/stats/locations?limit=10 | Admin | Top địa điểm (Aggregation) | 200, 401, 403 |
+Mọi API có thể trả 500 khi lỗi không lường trước (Exception Filter toàn cục ghi log, trả thông báo chung).
+Thông báo thời gian thực (N03): client mở kết nối Socket.IO tới gốc server (không có /api), gửi token khi kết nối. Server kiểm token như REST (BR09, BR11), chỉ thành viên được giữ kết nối, mỗi người vào phòng user:<id>. Sự kiện notification gửi { notification, unreadCount } mỗi khi notify() tạo hoặc làm mới thông báo; admin khoá tài khoản hoặc đặt mật khẩu tạm thì server ngắt kết nối của người đó. Polling 30 giây vẫn giữ để dự phòng.
+6.2 Ma trận phân quyền
+| Hành động | Khách | Thành viên | Chủ sở hữu | Admin |
+| Xem bài công khai | Có | Có | Có | Có |
+| Xem bài “Chỉ người theo dõi” | — | Nếu đang theo dõi tác giả | Có | Có |
+| Tìm bài, tìm thành viên, xem trang cá nhân | Có | Có | Có | Có |
+| Đăng bài | — | Có | — | — |
+| Sửa bài | — | — | Có | — |
+| Xoá bài | — | — | Có | Có |
+| Thích, bình luận, theo dõi, báo cáo | — | Có | Có | — |
+| Xoá bình luận | — | — | Chủ BL hoặc chủ bài | Có |
+| Xem / đọc thông báo | — | Của mình | — | — |
+| Xử lý báo cáo, ẩn bài | — | — | — | Có |
+| Đăng ký tài khoản (member) | Có | — | — | — |
+| Đổi mật khẩu của mình | — | Có | — | Có |
+| Tạo tài khoản member / admin, đổi vai trò, đặt lại mật khẩu | — | — | — | Có; tạo admin, đổi vai trò chỉ admin gốc (BR24) |
+| Khoá tài khoản | — | — | — | Có, trừ admin gốc (BR24) |
+| Xem thống kê | — | — | — | Có |
+6.3 Guard, Pipe, Filter (NestJS)
+NestJS thay middleware Express bằng các khối chuyên biệt. Bảng dưới đối chiếu với tiêu chí 7 và 9 của đề để báo cáo trình bày rõ yêu cầu nào được đáp ứng ở đâu.
+| Thành phần NestJS | Việc làm | Ứng với yêu cầu đề |
+| Module + Controller theo tài nguyên | AuthModule, UsersModule, AdminUsersModule, FollowsModule, PostsModule, LikesModule, CommentsModule, NotificationsModule, ReportsModule, StatsModule, PlacesModule | Router tách theo tài nguyên |
+| JwtAuthGuard (passport-jwt) | Bắt buộc token hợp lệ (401); JwtStrategy.validate đọc lại user từ DB: bị khoá → 403, token cũ hơn passwordChangedAt → 401, req.user.role lấy từ DB | Middleware kiểm tra đăng nhập |
+| OptionalJwtAuthGuard | Có token thì gắn req.user, không có vẫn cho qua (API khách xem được) | — |
+| RolesGuard + @Roles('admin') | Sai vai trò → 403 | API kiểm tra quyền, không chỉ ẩn nút |
+| PostAccessGuard | Tìm bài theo :id, áp BR01 và BR10; không xem được → 404 | Bài “Chỉ người theo dõi” |
+| OwnershipGuard | So author của bản ghi với người gọi → 403 nếu khác | Quyền theo chủ sở hữu |
+| ValidationPipe toàn cục + DTO (class-validator) | whitelist, transform; sai dữ liệu → 400 kèm lỗi từng trường. Form multipart gửi mọi trường dạng chuỗi: DTO bài viết dùng @Transform (JSON.parse cho location, Number cho cost, Date cho tripDate) trước khi validate | Kiểm tra dữ liệu đầu vào ở server |
+| FilesInterceptor('images', 6) + ParseFilePipe | Tối đa 6 file, ≤ 5 MB, chỉ JPG/PNG/WebP → 400 | Kiểm tra định dạng, dung lượng ảnh |
+| AllExceptionsFilter (@Catch()) | Gom mọi lỗi về một định dạng JSON và đúng mã trạng thái | Middleware xử lý lỗi tập trung |
+| ConfigModule (.env) | JWT_SECRET, MONGODB_URI, CLOUDINARY_* đọc từ .env | Secret và chuỗi kết nối để trong .env |
+7. Sơ đồ route và wireframe
+7.1 Sơ đồ route React
+| Đường dẫn | Trang | Layout | Bảo vệ |
+| / | FeedPage (bảng tin) | MainLayout (Outlet) | Khách → <Navigate to="/explore" /> |
+| /explore | ExplorePage (bài công khai + tìm) | MainLayout | — |
+| /posts/:id | PostDetailPage | MainLayout | — (server lọc quyền) |
+| /posts/new | PostFormPage | MainLayout | RequireAuth |
+| /posts/:id/edit | PostFormPage | MainLayout | RequireAuth + chủ bài |
+| /u/:username | ProfilePage (tab Bài viết / Bản đồ) | MainLayout | — |
+| /settings/profile | EditProfilePage | MainLayout | RequireAuth |
+| /settings/password | ChangePasswordPage | MainLayout | RequireAuth |
+| /notifications | NotificationsPage | MainLayout | RequireAuth |
+| /login, /register | LoginPage, RegisterPage | AuthLayout | Đã đăng nhập → <Navigate to="/" /> |
+| /admin/login | AdminLoginPage | AuthLayout | Đã là admin → <Navigate to="/admin" /> |
+| /admin/reports | AdminReportsPage | AdminLayout (Outlet) | RequireRole admin |
+| /admin/users | AdminUsersPage (danh sách, tạo, đổi vai trò, khoá, đặt lại mật khẩu) | AdminLayout | RequireRole admin (chưa đăng nhập → /admin/login) |
+| /admin/stats | AdminStatsPage | AdminLayout | RequireRole admin |
+| * | NotFoundPage (404) | — | — |
+Đáp ứng yêu cầu chung: nested route + <Outlet /> (3 layout), dynamic route + useParams (/posts/:id, /u/:username), NavLink có trạng thái active trên thanh menu, useNavigate sau khi lưu bài, route bảo vệ bằng <Navigate />, trang 404.
+7.2 Wireframe
+Wireframe chỉ chốt bố cục và thành phần, chưa chốt màu sắc hay font.
+Hình 2. Bảng tin – máy tính (cuộn vô hạn, gợi ý theo dõi)
+Hình 3. Bảng tin – điện thoại (thanh điều hướng dưới đáy)
+Hình 4. Chi tiết bài viết (ảnh, thích, báo cáo, bình luận trả lời 1 cấp)
+Hình 5. Đăng / sửa bài (form controlled, lỗi hiện ngay dưới trường, xem trước ảnh)
+Hình 6. Trang cá nhân – điện thoại
+Hình 7. Admin – xử lý báo cáo vi phạm (phân trang ở server)
+Màn hình tài khoản và vận hành
+Hình 8. Đăng nhập – máy tính (lỗi hiện ngay dưới trường, quên mật khẩu thì liên hệ admin)
+Hình 9. Đăng ký – điện thoại (luôn tạo tài khoản member)
+Hình 10. Đăng nhập quản trị /admin/login (tài khoản không phải admin nhận 403)
+Hình 11. Admin – quản lý tài khoản và hộp thoại tạo tài khoản member/admin
+Hình 12. Đổi mật khẩu – điện thoại
+Hình 13. Thông báo – điện thoại (chưa đọc / đã đọc, cuộn tải thêm)
+8. Kiến trúc front-end
+8.1 Dữ liệu dùng chung: Context hay Zustand
+| Dữ liệu | Nơi lưu | Lý do |
+| Người dùng đang đăng nhập, token, login/logout | AuthContext | Ít thay đổi, cần ở mọi nơi (header, route bảo vệ). Token lưu localStorage; axios interceptor gắn Authorization: Bearer, nhận 401 thì đăng xuất và về /login (admin về /admin/login) |
+| Sáng / tối | ThemeContext + useLocalStorage | Ít thay đổi, nhớ lựa chọn sau khi tải lại trang |
+| Danh sách bài bảng tin, trang, hasMore, trạng thái thích | Zustand: useFeedStore | Nhiều component cùng đọc/sửa; thích kiểu optimistic: action toggleLike đổi state ngay, gọi API, lỗi thì set lại giá trị cũ |
+| Số thông báo chưa đọc, danh sách thông báo | Zustand: useNotificationStore | Header (chuông) và trang thông báo dùng chung; polling 30 giây cập nhật unreadCount trong store (thay Redux store, đã được duyệt) |
+| Form, mở/đóng hộp thoại, ảnh đang chọn | State cục bộ (useState) | Chỉ một component dùng |
+8.2 Custom hook (tối thiểu 2, dự kiến 6)
+| Hook | Dùng ở | Ghi chú |
+| useFetch(url) | Trang chi tiết, trang cá nhân | Trả { data, loading, error }; huỷ request khi unmount (AbortController) |
+| useDebounce(value, 400) | Ô tìm kiếm | Chỉ gọi API khi người dùng ngừng gõ |
+| useLocalStorage(key, init) | ThemeContext | Đồng bộ state với localStorage |
+| useInfiniteScroll(callback) | Bảng tin, trang Khám phá | IntersectionObserver; gọi loadMore(nextCursor); disconnect khi unmount |
+| usePolling(fn, 30000) | Chuông thông báo | setInterval; clearInterval khi unmount |
+| useImagePreviews(files) | Form đăng bài | URL.createObjectURL; revokeObjectURL khi bỏ ảnh / unmount |
+8.3 Component dự kiến (yêu cầu ≥ 15)
+| Nhóm | Component |
+| Bố cục | Header, NavBar (NavLink), BottomNav (điện thoại), ThemeToggle, NotificationBell, SearchBox |
+| Bài viết | PostCard, PostGallery, PostMeta, LikeButton, ReportDialog, ImageUploader, VisibilityPicker |
+| Bình luận | CommentList, CommentItem, CommentForm |
+| Người dùng | Avatar, UserMiniCard, FollowButton, ProfileHeader |
+| Dùng chung | FormField (label + lỗi), Button, Pagination, Spinner, EmptyState, ConfirmDialog |
+| Route | RequireAuth, RequireRole, MainLayout, AuthLayout, AdminLayout |
+8.4 Cấu trúc thư mục
+| client/src/ | server/src/ |
+| api/ (axios instance, hàm gọi API) stores/ (useFeedStore.ts, useNotificationStore.ts) contexts/ (AuthContext, ThemeContext) hooks/ (6 custom hook) types/ (kiểu dữ liệu dùng chung) components/ (dùng chung) pages/ (theo route) layouts/ routes.tsx main.tsx | main.ts, app.module.ts common/ (guards, decorators, filters, pipes) config/ (env, cloudinary) auth/ (module, controller, service, jwt.strategy, dto) users/  follows/  posts/  comments/ likes/  notifications/  reports/  stats/ places/  admin-users/    mỗi thư mục: *.module.ts, *.controller.ts,    *.service.ts, schemas/, dto/ seed/ (script tạo dữ liệu demo) .env.example |
+9. Phân công và kế hoạch
+9.1 Phân công (3 người)
+Mỗi người làm trọn chức năng từ giao diện đến API, để lịch sử commit thể hiện rõ phần của từng người và ai cũng giải thích được phần mình khi bảo vệ.
+| Thành viên | Chức năng | Backend | Frontend |
+| A | F01–F01d, F04, F08, F10, F11, F14, F16–F18 (Tài khoản, quản lý và khoá tài khoản, theo dõi, thông báo) | Auth (JWT, bcrypt, đăng nhập admin, đổi mật khẩu), script khởi tạo admin, quản lý tài khoản (UsersService + BR17), JwtAuthGuard, RolesGuard, AllExceptionsFilter, users, follows, notifications + NotificationsService.notify(), khoá/mở khoá (BR09: gọi PostsService.setAuthorLocked của B và CommentsService.setAuthorLocked của C) | AuthContext, ThemeContext, Login/Register, AdminLoginPage, ChangePasswordPage, AdminUsersPage, ProfilePage, EditProfilePage, FollowButton, useNotificationStore + usePolling |
+| B | F02, F03, F05, N01 (Bài viết, tìm kiếm, bản đồ) | posts CRUD (sửa có thêm/bớt ảnh), upload FilesInterceptor + Cloudinary, PostAccessGuard, bộ lọc quyền xem BR01/BR09/BR10, tìm kiếm $regex/$in, PlacesModule (Google Places) | PostFormPage, PostDetailPage, ExplorePage, ImageUploader + useImagePreviews, SearchBox + useDebounce, PlaceInput (gợi ý Google, cho nhập tay), Leaflet |
+| C | F06, F07, F09, F12, F13, F15 (Bảng tin, tương tác, kiểm duyệt, thống kê) | feed, likes, comments (trả lời 1 cấp, xoá kèm trả lời BR22), reports (xử lý gộp theo bài BR21), ẩn/bỏ ẩn bài, thống kê Aggregation | FeedPage + useInfiniteScroll, useFeedStore (optimistic like), CommentList/Form, AdminLayout, AdminReportsPage, AdminStatsPage |
+| Chung | Script seed, README, báo cáo, video demo, deploy | Mỗi người viết seed cho collection của mình | Mỗi người chụp màn hình phần của mình |
+Khối lượng: A nhẹ hơn ở phần bài viết nhưng giữ Guard xác thực, Exception Filter và ValidationPipe mà cả nhóm dựa vào, nên phải xong sớm nhất (cuối tuần 1). B giữ bộ lọc quyền xem (BR01), chỗ dễ mất điểm nhất, nên viết thành một hàm dùng chung để C dùng lại trong bảng tin và bình luận.
+9.2 Kế hoạch 5 tuần
+| Tuần | Việc | Kết quả cuối tuần |
+| 1 | Chốt tài liệu này; cả nhóm học nhanh NestJS (module, controller, service, DTO, guard); dựng repo client/server; A làm auth + guard + seed:admin + đăng nhập admin; B, C viết schema + seed:demo | Đăng ký/đăng nhập chạy được; DB có dữ liệu mẫu |
+| 2 | B: posts CRUD + upload + PlacesModule; C: feed + likes; A: hồ sơ + theo dõi + đổi mật khẩu | Đăng bài có ảnh, bảng tin hiện bài |
+| 3 | C: bình luận + báo cáo; A: thông báo + polling + quản lý, khoá tài khoản (F14, F17); B: tìm kiếm + quyền xem | Đủ chức năng thành viên |
+| 4 | C: trang báo cáo + thống kê; B: Leaflet; A: sáng/tối, responsive; kiểm thử phân quyền bằng gọi thẳng API (Postman) | Đủ chức năng bắt buộc, có nâng cao |
+| 5 | Sửa lỗi, deploy (CORS, biến môi trường), README, báo cáo, quay video demo | Nộp bài |
+9.3 Quy ước làm việc
+Nhánh: main (bản nộp) ← dev ← feature/<tên>-<chức-năng>, ví dụ feature/b-upload-anh.
+Mỗi chức năng một Pull Request; người khác trong nhóm xem rồi mới gộp vào dev.
+Commit nhỏ, mô tả rõ: “posts: chặn bài followers ở GET /posts/:id”. Không commit .env, chỉ commit .env.example.
+Định dạng lỗi API và cấu trúc phân trang thống nhất như mục 6, chốt trước khi code.
+10. Quyết định đã chốt
+Các câu hỏi mở của bản nháp đã được nhóm chốt ngày 05/11/2026. Bảng ghi lại quyết định và chỗ bị ảnh hưởng trong tài liệu.
+| # | Câu hỏi | Quyết định | Ảnh hưởng |
+| 1 | Gọi thẳng API bài “Chỉ người theo dõi” khi không có quyền | Trả 404, không lộ bài có tồn tại | BR01, PostAccessGuard (6.3) |
+| 2 | Bài của tài khoản bị khoá | Ẩn luôn khỏi bảng tin, tìm kiếm, trang cá nhân, chi tiết; mở khoá thì hiện lại | BR09, trường posts.authorLocked, bộ lọc quyền xem, thống kê |
+| 3 | Phân trang bảng tin | Cursor (createdAt + _id); bảng quản trị vẫn dùng số trang | BR12, 5.2, 6.1, useInfiniteScroll |
+| 4 | Sửa bài có đổi ảnh không | Được thêm và bớt ảnh, tổng ≤ 6 | BR15, UC05, PATCH /api/posts/:id |
+| 5 | TypeScript ở đâu | TypeScript toàn bộ client và server | Mục 0, cấu trúc thư mục (8.4) |
+| 6 | Nhập địa điểm | Nhập tay hoặc chọn từ gợi ý Google Places | BR16, posts.location, /api/places, thống kê, bản đồ |
+| 7 | Chức năng tài khoản để vận hành tối thiểu | Admin đầu tiên tạo bằng script; admin tạo tài khoản, đổi vai trò, đặt lại mật khẩu; trang đăng nhập admin riêng; đổi mật khẩu | F01–F01d, F17, F18, UC02–UC02c, UC16–UC18, BR17–BR19, mục 10.2 |
+| 8 | Rà soát v1.0 (05/11/2026) | Route người dùng: công khai theo username, quản trị dưới /api/admin/users; tìm địa điểm trên nameKey đã chuẩn hoá và escape regex; bổ sung LikesModule, PlacesModule, AdminUsersModule; kiểu dữ liệu không import chéo client/server; làm rõ BR10; sắp lại thứ tự UC15, BR16 | Mục 0, BR10, BR16, 5.2, 6 (đoạn đầu, 6.1, 6.3) |
+| 9 | Rà soát lần 2 (05/11/2026) | Admin chỉ quản trị, không tương tác (BR20); xử lý báo cáo gộp theo bài và cho bỏ ẩn (BR21); xoá bình luận gốc kèm trả lời (BR22); bỏ comments.isHidden, thêm comments.authorLocked; role đọc từ DB, passwordChangedAt; chống thông báo trùng; F14 chuyển sang A; kế hoạch có đủ F14, F17, F18, Places; CORS, token, multipart DTO | Mục 0, UC02, UC13, BR08, BR09, BR11, BR20–BR22, 5.1, 5.2, 6.1, 6.3, 8.1, 8.4, 9.1, 9.2, 10.2 |
+| 10 | Bổ sung khi code (10/11/2026) | N03 Socket.IO đã làm. Thêm chức năng mở rộng do A làm, không đổi phần bắt buộc: tìm thành viên (E01), admin gốc (E02), đồng bộ đăng nhập giữa các tab (E03), chặn dò mật khẩu (E04) | 1.2, BR23–BR25, 5.1, 6.1, 6.2 |
+10.1 Lưu ý khi dùng Google Places
+Cần tạo project trên Google Cloud, bật Places API (New) và gắn tài khoản thanh toán. Google có hạn mức miễn phí hằng tháng; đặt quota thấp trong Cloud Console để không bị tính tiền ngoài ý muốn khi demo.
+Server gọi Google (PlacesModule) thay vì client gọi thẳng, để API key nằm trong .env của server, không lộ trong mã front-end. Đúng yêu cầu 9 của đề.
+Dùng session token cho mỗi lần gõ – chọn, và ô nhập có debounce (useDebounce), để giảm số lượt gọi bị tính phí.
+Google lỗi hoặc hết hạn mức (502) thì ô địa điểm vẫn cho nhập tay; bài vẫn đăng được, chỉ thiếu toạ độ nên không hiện trên bản đồ.
+10.2 Vận hành tối thiểu: từ cài đặt đến dùng được
+Người cài đặt điền .env (MONGODB_URI, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, CLOUDINARY_*, GOOGLE_PLACES_KEY, CLIENT_URL).
+Chạy npm run seed:admin: tạo admin đầu tiên từ ADMIN_EMAIL / ADMIN_PASSWORD; chạy lại không tạo trùng. (npm run seed:demo tạo thêm dữ liệu mẫu để demo.)
+Admin vào /admin/login, đổi mật khẩu mặc định ở /settings/password.
+Người dùng tự đăng ký ở /register (luôn là member), hoặc admin tạo tài khoản ở /admin/users. Admin có thể tạo thêm admin.
+Người dùng quên mật khẩu: báo admin, admin đặt mật khẩu tạm ở /admin/users, người dùng đăng nhập rồi đổi lại. (Quên mật khẩu qua email nằm ngoài phạm vi.)
+Tài khoản vi phạm: admin khoá ở /admin/users; hệ thống luôn giữ ít nhất 1 admin (BR17).
+README ghi đúng các bước trên cùng tài khoản demo cho từng vai trò, theo yêu cầu nộp bài.
