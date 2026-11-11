@@ -435,6 +435,37 @@ describe('Bộ lọc quyền xem và xem chi tiết bài (B6, BR01/BR09/BR10)', 
   });
 });
 
+describe('Số bài trên trang cá nhân (F04, theo bộ lọc quyền xem B6)', () => {
+  test('Mỗi người xem đếm đúng số bài mình thấy: khách 1, người lạ 1, người theo dõi 2, chính chủ 3, admin 3', async () => {
+    const author = await register('pcauthor');
+    const follower = await register('pcfollower');
+    const stranger = await register('pcstranger');
+    const make = async (visibility) => {
+      const r = await api('POST', '/posts', { token: author.token, form: fileForm('images', [], { ...basePost, visibility }) });
+      assert.equal(r.status, 201, JSON.stringify(r.body));
+      return r.body._id;
+    };
+    await make('public');
+    await make('followers');
+    const hidden = await make('public');
+    // Ẩn một bài thẳng qua DB (chưa có API admin ẩn bài).
+    const { MongoClient, ObjectId } = await import('mongodb');
+    const uri = process.env.MONGODB_URI ?? 'mongodb://127.0.0.1:27017/travellog_test';
+    const client = new MongoClient(uri);
+    await client.connect();
+    await client.db(uri.split('/').pop().split('?')[0]).collection('posts').updateOne({ _id: new ObjectId(hidden) }, { $set: { status: 'hidden' } });
+    await client.close();
+    await api('POST', '/follows', { token: follower.token, json: { userId: author.user._id } });
+
+    const count = async (token) => (await api('GET', `/users/${author.user.username}`, { token })).body.postCount;
+    assert.equal(await count(), 1, 'khách: chỉ bài công khai còn hiện');
+    assert.equal(await count(stranger.token), 1, 'người lạ: như khách');
+    assert.equal(await count(follower.token), 2, 'người theo dõi: thêm bài "chỉ người theo dõi"');
+    assert.equal(await count(author.token), 3, 'chính chủ: cả bài bị ẩn');
+    assert.equal(await count(admin), 3, 'admin: thấy hết');
+  });
+});
+
 describe('Tìm người dùng (mở rộng)', () => {
   test('Không phân biệt dấu, khớp đầu từ, bỏ @; ẩn tài khoản bị khoá; không lộ email', async () => {
     const tag = `z${uid}`; // từ riêng của lần chạy này để không lẫn dữ liệu cũ
