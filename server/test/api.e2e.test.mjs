@@ -56,6 +56,16 @@ before(async () => {
   admin = r.body.token;
 });
 
+// Bài mẫu dùng chung cho B4 (đăng bài) và B6 (quyền xem).
+const basePost = {
+  title: 'Bài kiểm thử tự động',
+  content: 'Nội dung có #KiemThu và #hoian',
+  location: { name: 'Hội   An' },
+  tripDate: '2026-01-15',
+  cost: 1000,
+  visibility: 'public',
+};
+
 describe('Tài khoản (F01)', () => {
   test('BR18: đăng ký luôn là member, role gửi kèm bị bỏ qua, không trả passwordHash', async () => {
     const r = await api('POST', '/auth/register', {
@@ -306,15 +316,6 @@ describe('Quản trị tài khoản (F14, F17, F18)', () => {
 });
 
 describe('Bài viết (B4)', () => {
-  const basePost = {
-    title: 'Bài kiểm thử tự động',
-    content: 'Nội dung có #KiemThu và #hoian',
-    location: { name: 'Hội   An' },
-    tripDate: '2026-01-15',
-    cost: 1000,
-    visibility: 'public',
-  };
-
   test('BR05 + BR13 + BR16: đăng bài có ảnh, tách hashtag, chuẩn hoá địa điểm', async () => {
     const u = await register('poster');
     const ok = await api('POST', '/posts', { token: u.token, form: fileForm('images', [png, png], basePost) });
@@ -390,14 +391,24 @@ describe('Bộ lọc quyền xem và xem chi tiết bài (B6, BR01/BR09/BR10)', 
     assert.equal((await api('GET', `/posts/${post._id}`, { token: admin })).status, 200);
   });
 
-  test('Bài có authorLocked: chỉ admin thấy; tác giả cũng 404', async () => {
+  test('Bài có authorLocked: chỉ admin thấy; tác giả bị khoá dùng token cũ nhận 403 ACCOUNT_LOCKED', async () => {
     const author = await register('lauthor');
     const post = await makePost(author.token, publicPost);
-    // khoá tác giả
+    // Set authorLocked: true thẳng qua DB (chưa có endpoint nối khoá → bài, tuần 3).
+    const { MongoClient, ObjectId } = await import('mongodb');
+    const uri = process.env.MONGODB_URI ?? 'mongodb://127.0.0.1:27017/travellog_test';
+    const dbName = uri.split('/').pop().split('?')[0];
+    const client = new MongoClient(uri);
+    await client.connect();
+    await client.db(dbName).collection('posts').updateOne({ _id: new ObjectId(post._id) }, { $set: { authorLocked: true } });
+    await client.close();
+    assert.equal((await api('GET', `/posts/${post._id}`)).status, 404);
+    // Tác giả bị khoá tài khoản (isLocked) thì token cũ nhận 403 ACCOUNT_LOCKED trước khi vào guard.
     const lock = await api('PATCH', `/admin/users/${author.user._id}`, { token: admin, json: { isLocked: true } });
     assert.equal(lock.status, 200, JSON.stringify(lock.body));
-    assert.equal((await api('GET', `/posts/${post._id}`)).status, 404);
-    assert.equal((await api('GET', `/posts/${post._id}`, { token: author.token })).status, 404);
+    const locked = await api('GET', `/posts/${post._id}`, { token: author.token });
+    assert.equal(locked.status, 403);
+    assert.equal(locked.body.error.code, 'ACCOUNT_LOCKED');
     assert.equal((await api('GET', `/posts/${post._id}`, { token: admin })).status, 200);
     // mở khoá
     await api('PATCH', `/admin/users/${author.user._id}`, { token: admin, json: { isLocked: false } });

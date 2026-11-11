@@ -79,42 +79,15 @@ export class PostsService {
     };
   }
 
-  // Áp đúng luật BR01/BR09/BR10 cho một bài đã tải (dùng khi xem chi tiết, thích, bình luận, báo cáo).
-  canView(post: Pick<Post, 'authorLocked' | 'status' | 'visibility' | 'author'>, viewer?: AuthUser): boolean {
-    if (viewer?.role === 'admin') return true;
-    if (post.authorLocked) return false;
-    const isAuthor = viewer && String(post.author) === viewer.id;
-    if (post.status === 'hidden') return !!isAuthor;
-    if (post.visibility === 'public') return true;
-    // visibility === 'followers': cần là chính tác giả (đã check ở trên) hoặc đang theo dõi tác giả.
-    // Guard/Service gọi hàm đồng bộ này sau khi đã biết viewer có theo dõi tác giả hay không
-    // (PostAccessGuard dùng findOneForViewer bên dưới, đã gộp luật theo dõi vào truy vấn).
-    return !!isAuthor;
-  }
-
   // Tải một bài theo id, đồng thời áp luật quyền xem. Trả null nếu không tồn tại hoặc không có quyền.
   // Dùng cho PostAccessGuard và mọi chỗ cần xem chi tiết / thích / bình luận / báo cáo.
+  // Tận dụng lại visibilityFilter để không chép điều kiện ở hai nơi.
   async findOneForViewer(id: string, viewer?: AuthUser): Promise<PostDocument | null> {
     if (viewer?.role === 'admin') {
       return this.postModel.findById(id).exec();
     }
-    if (!viewer) {
-      return this.postModel.findOne({ _id: id, status: 'active', authorLocked: false, visibility: 'public' }).exec();
-    }
-    const followingIds = await this.follows.followingIds(viewer.id);
-    return this.postModel
-      .findOne({
-        _id: id,
-        authorLocked: false,
-        $or: [
-          { author: new Types.ObjectId(viewer.id) },
-          {
-            status: 'active',
-            $or: [{ visibility: 'public' }, { author: { $in: followingIds } }],
-          },
-        ],
-      })
-      .exec();
+    const filter = await this.visibilityFilter(viewer);
+    return this.postModel.findOne({ _id: id, ...filter }).exec();
   }
 
   // Serialize một bài viết theo api-contract: author là UserSummary, likedByMe tính theo bảng likes.

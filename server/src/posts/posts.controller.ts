@@ -20,6 +20,7 @@ import { AuthUser } from '../common/auth-user';
 import { AccessiblePost } from './decorators/accessible-post.decorator';
 import { CreatePostDto } from './dto/post.dto';
 import { PostAccessGuard } from './guards/post-access.guard';
+import { PostDocument } from './schemas/post.schema';
 import { PostsService } from './posts.service';
 
 @Controller('posts')
@@ -60,7 +61,7 @@ export class PostsController {
   // PostAccessGuard đã kiểm tra quyền xem và gắn bài vào req.post.
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard, PostAccessGuard)
-  async findOne(@AccessiblePost() post: import('./schemas/post.schema').PostDocument, @CurrentUser() user?: AuthUser) {
+  async findOne(@AccessiblePost() post: PostDocument, @CurrentUser() user?: AuthUser) {
     return this.posts.toClient(post, user);
   }
 }
