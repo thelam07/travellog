@@ -56,6 +56,16 @@ before(async () => {
   admin = r.body.token;
 });
 
+// Bài mẫu dùng chung cho B4 (đăng bài) và B6 (quyền xem).
+const basePost = {
+  title: 'Bài kiểm thử tự động',
+  content: 'Nội dung có #KiemThu và #hoian',
+  location: { name: 'Hội   An' },
+  tripDate: '2026-01-15',
+  cost: 1000,
+  visibility: 'public',
+};
+
 describe('Tài khoản (F01)', () => {
   test('BR18: đăng ký luôn là member, role gửi kèm bị bỏ qua, không trả passwordHash', async () => {
     const r = await api('POST', '/auth/register', {
@@ -306,15 +316,6 @@ describe('Quản trị tài khoản (F14, F17, F18)', () => {
 });
 
 describe('Bài viết (B4)', () => {
-  const basePost = {
-    title: 'Bài kiểm thử tự động',
-    content: 'Nội dung có #KiemThu và #hoian',
-    location: { name: 'Hội   An' },
-    tripDate: '2026-01-15',
-    cost: 1000,
-    visibility: 'public',
-  };
-
   test('BR05 + BR13 + BR16: đăng bài có ảnh, tách hashtag, chuẩn hoá địa điểm', async () => {
     const u = await register('poster');
     const ok = await api('POST', '/posts', { token: u.token, form: fileForm('images', [png, png], basePost) });
@@ -333,6 +334,104 @@ describe('Bài viết (B4)', () => {
     assert.ok(future.body.error.details.tripDate);
     assert.equal((await api('POST', '/posts', { form: fileForm('images', [], basePost) })).status, 401);
     assert.equal((await api('POST', '/posts', { token: admin, form: fileForm('images', [], basePost) })).status, 403);
+  });
+});
+
+describe('Bộ lọc quyền xem và xem chi tiết bài (B6, BR01/BR09/BR10)', () => {
+  const publicPost = { ...basePost, title: 'Bài public B6', visibility: 'public' };
+  const followersPost = { ...basePost, title: 'Bài followers B6', visibility: 'followers' };
+
+  async function makePost(token, fields) {
+    const r = await api('POST', '/posts', { token, form: fileForm('images', [png], fields) });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    return r.body;
+  }
+
+  test('Bài public: khách 200, thành viên khác 200, chính tác giả 200, admin 200', async () => {
+    const author = await register('vauthor');
+    const other = await register('vother');
+    const post = await makePost(author.token, publicPost);
+    assert.equal((await api('GET', `/posts/${post._id}`)).status, 200);
+    assert.equal((await api('GET', `/posts/${post._id}`, { token: other.token })).status, 200);
+    assert.equal((await api('GET', `/posts/${post._id}`, { token: author.token })).status, 200);
+    assert.equal((await api('GET', `/posts/${post._id}`, { token: admin })).status, 200);
+  });
+
+  test('Bài followers: khách 404, người không theo dõi 404, người theo dõi 200, chính tác giả 200, admin 200', async () => {
+    const author = await register('fauthor');
+    const follower = await register('ffollower');
+    const stranger = await register('fstranger');
+    const post = await makePost(author.token, followersPost);
+    // follower theo dõi author
+    const follow = await api('POST', '/follows', { token: follower.token, json: { userId: author.user._id } });
+    assert.equal(follow.status, 201, JSON.stringify(follow.body));
+    assert.equal((await api('GET', `/posts/${post._id}`)).status, 404);
+    assert.equal((await api('GET', `/posts/${post._id}`, { token: stranger.token })).status, 404);
+    assert.equal((await api('GET', `/posts/${post._id}`, { token: follower.token })).status, 200);
+    assert.equal((await api('GET', `/posts/${post._id}`, { token: author.token })).status, 200);
+    assert.equal((await api('GET', `/posts/${post._id}`, { token: admin })).status, 200);
+  });
+
+  test('Bài status hidden: chỉ tác giả và admin thấy; khách / người theo dõi / người lạ đều 404', async () => {
+    const author = await register('hauthor');
+    const follower = await register('hfollower');
+    const post = await makePost(author.token, followersPost);
+    await api('POST', '/follows', { token: follower.token, json: { userId: author.user._id } });
+    // Ẩn bài trực tiếp qua DB (chưa có endpoint admin/posts/:id).
+    const { MongoClient, ObjectId } = await import('mongodb');
+    const uri = process.env.MONGODB_URI ?? 'mongodb://127.0.0.1:27017/travellog_test';
+    const dbName = uri.split('/').pop().split('?')[0];
+    const client = new MongoClient(uri);
+    await client.connect();
+    await client.db(dbName).collection('posts').updateOne({ _id: new ObjectId(post._id) }, { $set: { status: 'hidden' } });
+    await client.close();
+    assert.equal((await api('GET', `/posts/${post._id}`)).status, 404);
+    assert.equal((await api('GET', `/posts/${post._id}`, { token: follower.token })).status, 404);
+    assert.equal((await api('GET', `/posts/${post._id}`, { token: author.token })).status, 200);
+    assert.equal((await api('GET', `/posts/${post._id}`, { token: admin })).status, 200);
+  });
+
+  test('Bài có authorLocked: chỉ admin thấy; tác giả bị khoá dùng token cũ nhận 403 ACCOUNT_LOCKED', async () => {
+    const author = await register('lauthor');
+    const post = await makePost(author.token, publicPost);
+    // Set authorLocked: true thẳng qua DB (chưa có endpoint nối khoá → bài, tuần 3).
+    const { MongoClient, ObjectId } = await import('mongodb');
+    const uri = process.env.MONGODB_URI ?? 'mongodb://127.0.0.1:27017/travellog_test';
+    const dbName = uri.split('/').pop().split('?')[0];
+    const client = new MongoClient(uri);
+    await client.connect();
+    await client.db(dbName).collection('posts').updateOne({ _id: new ObjectId(post._id) }, { $set: { authorLocked: true } });
+    await client.close();
+    assert.equal((await api('GET', `/posts/${post._id}`)).status, 404);
+    // Tác giả bị khoá tài khoản (isLocked) thì token cũ nhận 403 ACCOUNT_LOCKED trước khi vào guard.
+    const lock = await api('PATCH', `/admin/users/${author.user._id}`, { token: admin, json: { isLocked: true } });
+    assert.equal(lock.status, 200, JSON.stringify(lock.body));
+    const locked = await api('GET', `/posts/${post._id}`, { token: author.token });
+    assert.equal(locked.status, 403);
+    assert.equal(locked.body.error.code, 'ACCOUNT_LOCKED');
+    assert.equal((await api('GET', `/posts/${post._id}`, { token: admin })).status, 200);
+    // mở khoá
+    await api('PATCH', `/admin/users/${author.user._id}`, { token: admin, json: { isLocked: false } });
+  });
+
+  test('id sai định dạng / không tồn tại đều 404 (không lộ bài có tồn tại)', async () => {
+    assert.equal((await api('GET', '/posts/khong-phai-objectid')).status, 404);
+    assert.equal((await api('GET', '/posts/000000000000000000000000')).status, 404);
+  });
+
+  test('likedByMe: false khi chưa thích, true khi đã thích (nếu endpoint đã có)', async () => {
+    const author = await register('lmauthor');
+    const viewer = await register('lmviewer');
+    const post = await makePost(author.token, publicPost);
+    const before = await api('GET', `/posts/${post._id}`, { token: viewer.token });
+    assert.equal(before.status, 200);
+    assert.equal(before.body.likedByMe, false);
+    // thử thích nếu endpoint tồn tại (C làm ở tuần sau)
+    const like = await api('POST', `/posts/${post._id}/likes`, { token: viewer.token });
+    if (like.status === 201) {
+      const after = await api('GET', `/posts/${post._id}`, { token: viewer.token });
+      assert.equal(after.body.likedByMe, true);
+    }
   });
 });
 

@@ -3,7 +3,9 @@ import {
   Body,
   Controller,
   FileTypeValidator,
+  Get,
   MaxFileSizeValidator,
+  Param,
   ParseFilePipe,
   Post,
   UploadedFiles,
@@ -12,10 +14,13 @@ import {
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser, Roles } from '../common/decorators';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { JwtAuthGuard, OptionalJwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { AuthUser } from '../common/auth-user';
+import { AccessiblePost } from './decorators/accessible-post.decorator';
 import { CreatePostDto } from './dto/post.dto';
+import { PostAccessGuard } from './guards/post-access.guard';
+import { PostDocument } from './schemas/post.schema';
 import { PostsService } from './posts.service';
 
 @Controller('posts')
@@ -49,6 +54,14 @@ export class PostsController {
     @CurrentUser() user: AuthUser,
   ) {
     const post = await this.posts.create(dto, files, user);
-    return this.posts.toClient(post);
+    return this.posts.toClient(post, user);
+  }
+
+  // Xem chi tiết bài (F02). Khách cũng xem được bài public; bài followers / hidden / authorLocked → 404.
+  // PostAccessGuard đã kiểm tra quyền xem và gắn bài vào req.post.
+  @Get(':id')
+  @UseGuards(OptionalJwtAuthGuard, PostAccessGuard)
+  async findOne(@AccessiblePost() post: PostDocument, @CurrentUser() user?: AuthUser) {
+    return this.posts.toClient(post, user);
   }
 }
