@@ -19,13 +19,15 @@ import { InjectModel } from '@nestjs/mongoose';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Transform } from 'class-transformer';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { AuthUser } from '../common/auth-user';
 import { CurrentUser, Roles } from '../common/decorators';
 import { JwtAuthGuard, OptionalJwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { StorageService } from '../common/storage/storage.service';
 import { FollowsService } from '../follows/follows.service';
+import { PostsService } from '../posts/posts.service';
+import { Post } from '../posts/schemas/post.schema';
 import { User } from './schemas/user.schema';
 import { toUser, toUserSummary } from './user.mapper';
 import { UsersService } from './users.service';
@@ -60,6 +62,8 @@ const avatarPipe = new ParseFilePipe({
 export class UsersController {
   constructor(
     @InjectModel(User.name) private readonly users: Model<User>,
+    @InjectModel(Post.name) private readonly postModel: Model<Post>,
+    private readonly posts: PostsService,
     private readonly follows: FollowsService,
     private readonly storage: StorageService,
     private readonly usersService: UsersService,
@@ -105,7 +109,8 @@ export class UsersController {
   @UseGuards(OptionalJwtAuthGuard)
   async profile(@Param('username') username: string, @CurrentUser() viewer?: AuthUser) {
     const user = await this.findVisible(username, viewer);
-    const [followerCount, followingCount, isFollowing] = await Promise.all([
+    const [postCount, followerCount, followingCount, isFollowing] = await Promise.all([
+      this.countPosts(user._id, viewer),
       this.follows.countFollowers(user._id),
       this.follows.countFollowing(user._id),
       viewer ? this.follows.isFollowing(viewer.id, String(user._id)) : false,
@@ -115,8 +120,7 @@ export class UsersController {
       bio: user.bio,
       role: user.role,
       createdAt: user.createdAt,
-      // B: thay bằng số bài người xem được thấy (theo bộ lọc BR01) khi có PostsService.
-      postCount: 0,
+      postCount,
       followerCount,
       followingCount,
       isFollowing,
@@ -136,6 +140,12 @@ export class UsersController {
   async following(@Param('username') username: string, @Query('cursor') cursor?: string, @CurrentUser() viewer?: AuthUser) {
     const user = await this.findVisible(username, viewer);
     return this.follows.listUsers(user._id, 'following', cursor);
+  }
+
+  // Số bài của người này mà người xem được thấy: cùng bộ lọc quyền xem với bảng tin, chi tiết bài (BR01, BR09, BR10).
+  // Khách chỉ đếm bài công khai; người theo dõi đếm thêm bài "chỉ người theo dõi"; chính chủ đếm cả bài bị ẩn; admin đếm hết.
+  private async countPosts(authorId: Types.ObjectId, viewer?: AuthUser) {
+    return this.postModel.countDocuments({ ...(await this.posts.visibilityFilter(viewer)), author: authorId });
   }
 
   // Tài khoản bị khoá chỉ admin còn thấy (BR09).
