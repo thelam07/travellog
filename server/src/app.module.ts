@@ -7,6 +7,7 @@ import { DatabaseModule } from './database.module';
 import { FollowsModule } from './follows/follows.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PostsModule } from './posts/posts.module';
+import { LikesModule } from './likes/likes.module';
 import { StorageModule } from './common/storage/storage.module';
 import { UsersModule } from './users/users.module';
 
@@ -34,6 +35,7 @@ class HealthController {
     FollowsModule,
     NotificationsModule,
     PostsModule,
+    LikesModule,
     StorageModule,
   ],
   controllers: [HealthController],

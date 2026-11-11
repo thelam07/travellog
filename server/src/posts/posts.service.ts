@@ -1,9 +1,11 @@
+import 'multer';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { isValidObjectId, Model, Types } from 'mongoose';
 import { AuthUser } from '../common/auth-user';
 import { StorageService } from '../common/storage/storage.service';
 import { toUserSummary } from '../users/user.mapper';
+import { Like } from '../likes/schemas/like.schema';
 import { CreatePostDto } from './dto/post.dto';
 import { Post, PostDocument } from './schemas/post.schema';
 
@@ -15,6 +17,7 @@ export class PostsService {
 
   constructor(
     @InjectModel(Post.name) private readonly postModel: Model<PostDocument>,
+    @InjectModel(Like.name) private readonly likeModel: Model<Like>,
     private readonly storage: StorageService,
   ) {}
 
@@ -53,10 +56,17 @@ export class PostsService {
     }
   }
 
-  // Serialize một bài viết theo api-contract: author là UserSummary, likedByMe = false.
-  // likedByMe sẽ tính đúng ở B6 khi có bảng likes.
-  async toClient(post: PostDocument) {
+  // Serialize một bài viết theo api-contract: author là UserSummary, likedByMe tính theo bảng likes nếu có currentUserId.
+  async toClient(post: PostDocument, currentUserId?: string) {
     const author = await this.postModel.populate(post, { path: 'author', select: 'username displayName avatar' });
+    let likedByMe = false;
+    if (currentUserId && isValidObjectId(currentUserId)) {
+      const exists = await this.likeModel.exists({
+        user: new Types.ObjectId(currentUserId),
+        post: new Types.ObjectId(String(post._id)),
+      });
+      likedByMe = Boolean(exists);
+    }
     return {
       _id: String(post._id),
       author: toUserSummary(author.author as never),
@@ -71,7 +81,7 @@ export class PostsService {
       status: post.status,
       likeCount: post.likeCount,
       commentCount: post.commentCount,
-      likedByMe: false,
+      likedByMe,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
     };
