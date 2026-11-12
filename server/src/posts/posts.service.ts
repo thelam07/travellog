@@ -22,7 +22,6 @@ export class PostsService {
     private readonly follows: FollowsService,
   ) {}
 
-  // Tạo bài viết mới: upload ảnh trước, nếu lưu DB lỗi thì xoá ảnh vừa upload.
   async create(dto: CreatePostDto, files: Express.Multer.File[], user: AuthUser): Promise<PostDocument> {
     if (files?.length > MAX_IMAGES) {
       throw new BadRequestException({
@@ -51,16 +50,11 @@ export class PostsService {
       });
       return await post.save();
     } catch (err) {
-      // Lưu lỗi: dọn ảnh đã upload rồi ném tiếp.
       await this.storage.removeMany(uploaded.map((u) => u.publicId));
       throw err;
     }
   }
 
-  // BR01/BR09/BR10: bộ lọc quyền xem dùng chung cho mọi API trả bài (bảng tin, tìm kiếm, trang cá nhân, bản đồ).
-  // - admin: thấy hết ({}).
-  // - khách: chỉ bài public, đang active, tác giả không bị khoá.
-  // - thành viên: bài của chính mình HOẶC (active VÀ (public HOẶC thuộc người mình theo dõi)); tác giả không bị khoá.
   async visibilityFilter(viewer?: AuthUser): Promise<Record<string, unknown>> {
     if (viewer?.role === 'admin') return {};
     if (!viewer) {
@@ -79,9 +73,6 @@ export class PostsService {
     };
   }
 
-  // Tải một bài theo id, đồng thời áp luật quyền xem. Trả null nếu không tồn tại hoặc không có quyền.
-  // Dùng cho PostAccessGuard và mọi chỗ cần xem chi tiết / thích / bình luận / báo cáo.
-  // Tận dụng lại visibilityFilter để không chép điều kiện ở hai nơi.
   async findOneForViewer(id: string, viewer?: AuthUser): Promise<PostDocument | null> {
     if (viewer?.role === 'admin') {
       return this.postModel.findById(id).exec();
@@ -90,7 +81,6 @@ export class PostsService {
     return this.postModel.findOne({ _id: id, ...filter }).exec();
   }
 
-  // Serialize một bài viết theo api-contract: author là UserSummary, likedByMe tính theo bảng likes.
   async toClient(post: PostDocument, viewer?: AuthUser) {
     const author = await this.postModel.populate(post, { path: 'author', select: 'username displayName avatar' });
     const likedByMe = viewer ? !!(await this.likeModel.exists({ post: post._id, user: viewer.id })) : false;
