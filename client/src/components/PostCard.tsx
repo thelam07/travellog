@@ -2,6 +2,7 @@
 import { Link } from 'react-router';
 import type { Post } from '../types';
 import { Avatar } from './Avatar';
+import { LikeButton } from './LikeButton';
 import { timeAgo, formatDate, formatCurrency } from '../utils/format';
 
 export interface PostCardProps {
@@ -89,10 +90,7 @@ export function PostCard({ post }: PostCardProps) {
 
       {/* 6. Hành động */}
       <div className="post-actions">
-        {/* TODO: Thay bằng LikeButton (Làm ở C6) */}
-        <button className="btn btn-ghost like-btn" style={{ color: post.likedByMe ? 'var(--like)' : 'inherit' }}>
-          {post.likedByMe ? '❤️' : '🤍'} {post.likeCount}
-        </button>
+        <LikeButton postId={post._id} initialLiked={post.likedByMe} initialCount={post.likeCount} />
         
         <Link to={`/posts/${post._id}`} className="btn btn-ghost">
           💬 {post.commentCount}
