@@ -1,6 +1,6 @@
-import 'multer';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { v2 as cloudinary } from 'cloudinary';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
@@ -13,32 +13,37 @@ export interface UploadedFile {
   height?: number;
 }
 
-// Lưu ảnh vào thư mục uploads/ ở gốc server. Sau này A thêm Cloudinary thì rẽ nhánh
-// theo CLOUDINARY_CLOUD_NAME trong .env: có thì dùng Cloudinary, không thì lưu đĩa.
+// .env có CLOUDINARY_CLOUD_NAME (khi deploy Render) thì lưu lên Cloudinary, ảnh nằm trong thư mục travellog/<folder>.
+// Không có (chạy local) thì lưu vào thư mục uploads/ ở gốc server. Ổ đĩa Render bị xoá mỗi lần deploy nên bản thật phải dùng Cloudinary.
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
   private readonly publicUrl: string;
   private readonly uploadsDir: string;
-  // true khi .env có CLOUDINARY_CLOUD_NAME — chỗ rẽ nhánh cho tương lai.
   private readonly useCloudinary: boolean;
 
   constructor(config: ConfigService) {
     this.publicUrl = (config.get<string>('PUBLIC_URL') ?? 'http://localhost:3000').replace(/\/$/, '');
     // uploads/ đặt cạnh dist/ khi chạy, tức là cạnh server/.
     this.uploadsDir = join(process.cwd(), 'uploads');
-    this.useCloudinary = !!config.get<string>('CLOUDINARY_CLOUD_NAME');
+    const cloudName = config.get<string>('CLOUDINARY_CLOUD_NAME');
+    this.useCloudinary = !!cloudName;
+    if (cloudName) {
+      cloudinary.config({
+        cloud_name: cloudName,
+        api_key: config.get<string>('CLOUDINARY_API_KEY'),
+        api_secret: config.get<string>('CLOUDINARY_API_SECRET'),
+        secure: true,
+      });
+    }
   }
 
-  // Upload một ảnh: ghi file vào uploads/<folder>/<randomUUID>.<ext>, trả về url + publicId.
-  // publicId = tên file (không kèm folder) để sau này xoá dễ.
+  // Upload một ảnh, trả về url + publicId.
+  // Lưu đĩa: ghi vào uploads/<folder>/<randomUUID>.<ext>, publicId = tên file (không kèm folder) để sau này xoá dễ.
+  // Cloudinary: publicId do Cloudinary đặt, dạng travellog/<folder>/<id>.
   // Đuôi file lấy từ mimetype, KHÔNG lấy từ originalname — tránh lưu file .html/.js
   // mà trình duyệt chạy như trang web (lỗi bảo mật A review ở PR #15).
   async upload(file: Express.Multer.File, folder: string): Promise<UploadedFile> {
-    if (this.useCloudinary) {
-      // TODO: khi A thêm Cloudinary thì upload lên Cloudinary ở đây.
-      throw new Error('Cloudinary chưa được cài đặt');
-    }
     const ext = this.extFromMime(file.mimetype);
     if (!ext) {
       throw new BadRequestException({
@@ -46,6 +51,7 @@ export class StorageService {
         message: 'Chỉ nhận ảnh JPG, PNG, WEBP',
       });
     }
+    if (this.useCloudinary) return this.uploadToCloudinary(file, folder);
     const dir = join(this.uploadsDir, folder);
     await fs.mkdir(dir, { recursive: true });
     const name = `${randomUUID()}${ext}`;
@@ -76,7 +82,11 @@ export class StorageService {
   async remove(publicId: string): Promise<void> {
     if (!publicId || publicId.startsWith('demo/')) return;
     if (this.useCloudinary) {
-      // TODO: Cloudinary.uploader.destroy(publicId).
+      try {
+        await cloudinary.uploader.destroy(publicId);
+      } catch (err) {
+        this.logger.warn(`Không xoá được ${publicId} trên Cloudinary: ${(err as Error).message}`);
+      }
       return;
     }
     try {
@@ -93,6 +103,18 @@ export class StorageService {
 
   async removeMany(publicIds: string[]): Promise<void> {
     await Promise.all(publicIds.map((id) => this.remove(id)));
+  }
+
+  // Gửi buffer lên Cloudinary qua stream (multer giữ file trong bộ nhớ, không ghi ra đĩa).
+  private uploadToCloudinary(file: Express.Multer.File, folder: string): Promise<UploadedFile> {
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader
+        .upload_stream({ folder: `travellog/${folder}`, resource_type: 'image' }, (err, result) => {
+          if (err || !result) return reject(err ?? new Error('Cloudinary không trả kết quả'));
+          resolve({ url: result.secure_url, publicId: result.public_id, width: result.width, height: result.height });
+        })
+        .end(file.buffer);
+    });
   }
 
   // Lấy đuôi file từ MIME type khi originalname không có đuôi.

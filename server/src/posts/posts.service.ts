@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { isValidObjectId, Model, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { AuthUser } from '../common/auth-user';
+import { FollowsService } from '../follows/follows.service';
+import { Like } from '../likes/schemas/like.schema';
 import { StorageService } from '../common/storage/storage.service';
 import { toUserSummary } from '../users/user.mapper';
-import { Like } from '../likes/schemas/like.schema';
 import { CreatePostDto } from './dto/post.dto';
 import { Post, PostDocument } from './schemas/post.schema';
 
@@ -18,9 +19,9 @@ export class PostsService {
     @InjectModel(Post.name) private readonly postModel: Model<PostDocument>,
     @InjectModel(Like.name) private readonly likeModel: Model<Like>,
     private readonly storage: StorageService,
+    private readonly follows: FollowsService,
   ) {}
 
-  // Tạo bài viết mới: upload ảnh trước, nếu lưu DB lỗi thì xoá ảnh vừa upload.
   async create(dto: CreatePostDto, files: Express.Multer.File[], user: AuthUser): Promise<PostDocument> {
     if (files?.length > MAX_IMAGES) {
       throw new BadRequestException({
@@ -49,23 +50,40 @@ export class PostsService {
       });
       return await post.save();
     } catch (err) {
-      // Lưu lỗi: dọn ảnh đã upload rồi ném tiếp.
       await this.storage.removeMany(uploaded.map((u) => u.publicId));
       throw err;
     }
   }
 
-  // Serialize một bài viết theo api-contract: author là UserSummary, likedByMe tính theo bảng likes nếu có currentUserId.
-  async toClient(post: PostDocument, currentUserId?: string) {
-    const author = await this.postModel.populate(post, { path: 'author', select: 'username displayName avatar' });
-    let likedByMe = false;
-    if (currentUserId && isValidObjectId(currentUserId)) {
-      const exists = await this.likeModel.exists({
-        user: new Types.ObjectId(currentUserId),
-        post: new Types.ObjectId(String(post._id)),
-      });
-      likedByMe = Boolean(exists);
+  async visibilityFilter(viewer?: AuthUser): Promise<Record<string, unknown>> {
+    if (viewer?.role === 'admin') return {};
+    if (!viewer) {
+      return { status: 'active', authorLocked: false, visibility: 'public' };
     }
+    const followingIds = await this.follows.followingIds(viewer.id);
+    return {
+      authorLocked: false,
+      $or: [
+        { author: new Types.ObjectId(viewer.id) },
+        {
+          status: 'active',
+          $or: [{ visibility: 'public' }, { author: { $in: followingIds } }],
+        },
+      ],
+    };
+  }
+
+  async findOneForViewer(id: string, viewer?: AuthUser): Promise<PostDocument | null> {
+    if (viewer?.role === 'admin') {
+      return this.postModel.findById(id).exec();
+    }
+    const filter = await this.visibilityFilter(viewer);
+    return this.postModel.findOne({ _id: id, ...filter }).exec();
+  }
+
+  async toClient(post: PostDocument, viewer?: AuthUser) {
+    const author = await this.postModel.populate(post, { path: 'author', select: 'username displayName avatar' });
+    const likedByMe = viewer ? !!(await this.likeModel.exists({ post: post._id, user: viewer.id })) : false;
     return {
       _id: String(post._id),
       author: toUserSummary(author.author as never),

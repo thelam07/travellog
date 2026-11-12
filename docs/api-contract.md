@@ -1,6 +1,6 @@
 # Hợp đồng API TravelLog
 
-Chi tiết hoá mục 6.1 của [thiet-ke-v1.2.txt](thiet-ke-v1.2.txt). Kiểu dữ liệu ở [client/src/types/index.ts](../client/src/types/index.ts).
+Chi tiết hoá mục 6.1 của [thiet-ke-v1.3.txt](thiet-ke-v1.3.txt). Kiểu dữ liệu ở [client/src/types/index.ts](../client/src/types/index.ts).
 
 - Tiền tố `/api`, JSON. Server dev: `http://localhost:3000`.
 - Header: `Authorization: Bearer <token>`.
@@ -19,10 +19,13 @@ Chi tiết hoá mục 6.1 của [thiet-ke-v1.2.txt](thiet-ke-v1.2.txt). Kiểu d
 | GET | /auth/me | | `User` |
 | PATCH | /auth/password | `{ currentPassword, newPassword }` | `{ token }` (token mới, token cũ hết hiệu lực) |
 
+Chặn dò mật khẩu (BR25, mở rộng): hai API đăng nhập giới hạn mỗi IP thử một email 5 lần/phút và mỗi IP 30 lần/phút, đếm cả lần đúng lẫn sai. Quá giới hạn trả 429 `TOO_MANY_REQUESTS` kèm câu báo đợi 1 phút. Các API khác (kể cả đăng ký) không bị giới hạn.
+
 ## Users, follows
 
 | Method | URL | Body / query | Trả về |
 |---|---|---|---|
+| GET | /users/search | `?q` (bỏ `@` ở đầu, tối đa 50 kí tự) | `UserSummary[]` (tối đa 10; mở rộng ngoài thiết kế, xem dưới) |
 | GET | /users/suggestions | | `UserSummary[]` (tối đa 5, N02) |
 | GET | /users/:username | | `Profile` |
 | GET | /users/:username/followers | `?cursor` | `CursorPage<UserSummary>` |
@@ -32,6 +35,8 @@ Chi tiết hoá mục 6.1 của [thiet-ke-v1.2.txt](thiet-ke-v1.2.txt). Kiểu d
 | PUT | /users/me/avatar | multipart, trường `avatar` | `User` |
 | POST | /follows | `{ userId }` | 201 `{ following: true }` |
 | DELETE | /follows/:userId | | `{ following: false }` |
+
+`/users/search`: khách cũng gọi được. Không phân biệt dấu, khớp đầu một từ trong tên hiển thị hoặc username: `lan`, `@lan`, `nguyen`, `Nguyễn` đều ra Lan Nguyễn, còn `an` thì không. Chỉ trả thành viên đang hoạt động (không admin, không tài khoản bị khoá), sắp theo username. `q` rỗng trả `[]`.
 
 ## Posts
 
@@ -68,6 +73,12 @@ Chi tiết hoá mục 6.1 của [thiet-ke-v1.2.txt](thiet-ke-v1.2.txt). Kiểu d
 | PATCH | /notifications | | `{ updated }` |
 | POST | /reports | `{ postId, reason, note? }` | 201 `Report` |
 
+Thông báo tức thời (N03, Socket.IO): client nối tới gốc server (không có `/api`), gửi `auth: { token }`. Chỉ thành viên được giữ kết nối, token sai, bị khoá hoặc là admin thì server ngắt ngay.
+
+- Sự kiện `notification`: `{ notification: Notification, unreadCount }`, gửi mỗi khi `notify()` tạo hoặc làm mới thông báo.
+- Admin khoá tài khoản hoặc đặt mật khẩu tạm thì server ngắt kết nối; client gọi lại API để biết phiên đã hết.
+- Polling `/notifications/unread-count` 30 giây vẫn giữ để dự phòng.
+
 ## Admin
 
 | Method | URL | Body / query | Trả về |
@@ -80,3 +91,9 @@ Chi tiết hoá mục 6.1 của [thiet-ke-v1.2.txt](thiet-ke-v1.2.txt). Kiểu d
 | PATCH | /admin/users/:id | `{ isLocked?, role? }` | `User` |
 | PUT | /admin/users/:id/password | `{ newPassword }` | `{ ok: true }` |
 | GET | /stats/locations | `?limit=10` | `LocationStat[]` |
+
+Admin gốc (mở rộng ngoài thiết kế): `User` có thêm `isOwner`. Admin đầu tiên (`seed:admin`, hoặc admin tạo sớm nhất khi DB có từ trước) là admin gốc, chỉ có một.
+
+- Không ai khoá, đổi vai trò hay đặt lại mật khẩu được admin gốc → 403 `OWNER_ONLY`.
+- Chỉ admin gốc được trao hoặc thu quyền admin: `PATCH /admin/users/:id` đổi `role`, hoặc `POST /admin/users` với `role: 'admin'`. Admin khác làm thì nhận 403 `OWNER_ONLY`. Gửi `role` trùng vai trò hiện tại không tính là đổi.
+- Admin thường vẫn tạo, khoá, mở khoá và đặt mật khẩu tạm cho thành viên.

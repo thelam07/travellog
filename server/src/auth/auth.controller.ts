@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, Patch, Post, UseGuards } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthUser } from '../common/auth-user';
 import { CurrentUser } from '../common/decorators';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -14,14 +15,17 @@ export class AuthController {
     return this.auth.register(dto);
   }
 
+  // Quá số lần thử (login-throttle.ts, BR25) → 429 trước khi kiểm mật khẩu
   @Post('login')
   @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
   login(@Body() dto: LoginDto) {
     return this.auth.login(dto, 'site');
   }
 
   @Post('admin/login')
   @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
   adminLogin(@Body() dto: LoginDto) {
     return this.auth.login(dto, 'admin');
   }

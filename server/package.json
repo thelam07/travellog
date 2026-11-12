@@ -8,7 +8,8 @@
     "dev": "tsc-watch -p tsconfig.build.json --onSuccess \"node dist/main.js\"",
     "seed:admin": "npm run build && node dist/seed/seed-admin.js",
     "seed:demo": "npm run build && node dist/seed/seed-demo.js",
-    "test": "tsx --test src/**/*.test.ts"
+    "test": "tsx --test src/**/*.test.ts",
+    "test:e2e": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.8",
@@ -18,9 +19,13 @@
     "@nestjs/mongoose": "^11.0.4",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.2.8",
+    "@nestjs/platform-socket.io": "^11.2.8",
+    "@nestjs/throttler": "^6.7.1",
+    "@nestjs/websockets": "^11.2.8",
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "cloudinary": "^2.11.0",
     "mongoose": "^9.12.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

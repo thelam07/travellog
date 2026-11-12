@@ -14,6 +14,8 @@ interface NotificationState {
   fetchUnreadCount: () => Promise<void>;
   loadFirst: () => Promise<void>;
   loadMore: () => Promise<void>;
+  /** N03: thông báo đẩy qua socket; thích / theo dõi lặp lại thì đưa bản cũ lên đầu */
+  receive: (n: Notification, unreadCount: number) => void;
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
   reset: () => void;
@@ -66,6 +68,13 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
       set({ loading: false });
     }
   },
+
+  receive: (n, unreadCount) =>
+    set((s) => ({
+      unreadCount,
+      // Danh sách chưa tải lần nào thì để trang thông báo tự tải khi mở.
+      items: s.items.length || !s.hasMore ? [n, ...s.items.filter((x) => x._id !== n._id)] : s.items,
+    })),
 
   // Optimistic: đổi giao diện trước, API lỗi thì trả lại
   markRead: async (id) => {
