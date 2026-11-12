@@ -14,16 +14,11 @@ export class LikesService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  /**
-   * BR02: Mỗi người chỉ thích một bài một lần. likeCount tăng bằng $inc.
-   * BR08: Tạo thông báo cho chủ bài khi có người khác thích.
-   */
   async like(user: AuthUser, postId: string) {
     if (!isValidObjectId(postId)) {
       throw new NotFoundException({ code: 'NOT_FOUND', message: 'Không tìm thấy bài viết' });
     }
 
-    // 1. Tạo bản ghi like; bắt lỗi trùng unique index { user: 1, post: 1 }
     try {
       await this.likeModel.create({
         user: new Types.ObjectId(user.id),
@@ -39,7 +34,6 @@ export class LikesService {
       throw err;
     }
 
-    // 2. Tăng likeCount bằng $inc
     const post = await this.postModel.findByIdAndUpdate(
       postId,
       { $inc: { likeCount: 1 } },
@@ -50,8 +44,6 @@ export class LikesService {
       throw new NotFoundException({ code: 'NOT_FOUND', message: 'Không tìm thấy bài viết' });
     }
 
-    // 3. Thông báo khi có người thích (BR08)
-    // NotificationsService.notify tự bỏ qua khi tự thích bài mình và không tạo thông báo trùng khi thích lại
     await this.notificationsService.notify({
       recipient: String(post.author),
       actor: user.id,
@@ -65,16 +57,11 @@ export class LikesService {
     };
   }
 
-  /**
-   * Bỏ thích: xoá bản ghi like, giảm likeCount bằng $inc.
-   * Bỏ thích thì không xoá thông báo cũ.
-   */
   async unlike(user: AuthUser, postId: string) {
     if (!isValidObjectId(postId)) {
       throw new NotFoundException({ code: 'NOT_FOUND', message: 'Không tìm thấy bài viết' });
     }
 
-    // Xoá like; nếu không có bản ghi thì báo 404 NOT_LIKED
     const deleted = await this.likeModel.findOneAndDelete({
       user: new Types.ObjectId(user.id),
       post: new Types.ObjectId(postId),
@@ -87,7 +74,6 @@ export class LikesService {
       });
     }
 
-    // Giảm likeCount bằng $inc
     const post = await this.postModel.findByIdAndUpdate(
       postId,
       { $inc: { likeCount: -1 } },
