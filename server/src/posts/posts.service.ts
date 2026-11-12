@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AuthUser } from '../common/auth-user';
+import { clampLimit, CURSOR_SORT, cursorFilter, toCursorPage } from '../common/utils/cursor';
 import { FollowsService } from '../follows/follows.service';
 import { Like } from '../likes/schemas/like.schema';
 import { StorageService } from '../common/storage/storage.service';
@@ -111,6 +112,36 @@ export class PostsService {
       likedByMe,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+    };
+  }
+
+  async getFeed(viewer: AuthUser, cursor?: string, rawLimit?: unknown) {
+    const limit = clampLimit(rawLimit, 10, 20);
+    const followingIds = await this.follows.followingIds(viewer.id);
+    const authors = [...followingIds, new Types.ObjectId(viewer.id)];
+    const visFilter = await this.visibilityFilter(viewer);
+    const curFilter = cursorFilter(cursor);
+
+    const andConditions: Record<string, unknown>[] = [
+      { author: { $in: authors } },
+      visFilter,
+    ];
+    if (Object.keys(curFilter).length > 0) {
+      andConditions.push(curFilter);
+    }
+
+    const docs = await this.postModel
+      .find({ $and: andConditions })
+      .sort(CURSOR_SORT)
+      .limit(limit + 1)
+      .exec();
+
+    const page = toCursorPage(docs, limit);
+    const items = await Promise.all(page.items.map((post) => this.toClient(post, viewer)));
+    return {
+      items,
+      nextCursor: page.nextCursor,
+      hasMore: page.hasMore,
     };
   }
 }
