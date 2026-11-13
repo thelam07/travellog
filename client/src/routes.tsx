@@ -23,7 +23,8 @@ import RegisterPage from './pages/RegisterPage';
 function HomeRoute({ feed }: { feed: ReactNode }) {
   const { user, ready } = useAuth();
   if (!ready) return <div className="page-loading">Đang tải…</div>;
-  if (!user || user.role === 'admin') return <Navigate to="/explore" replace />;
+  if (!user) return <Navigate to="/explore" replace />;
+  if (user.role === 'admin') return <Navigate to="/admin" replace />;
   return <>{feed}</>;
 }
 

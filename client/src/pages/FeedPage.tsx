@@ -26,7 +26,7 @@ export function FeedPage() {
 
   if (error && items.length === 0) {
     return (
-      <div className="container" style={{ padding: '24px 0' }}>
+      <div className="container feed-error-container">
         <div className="alert alert-error">{error}</div>
       </div>
     );
@@ -34,7 +34,7 @@ export function FeedPage() {
 
   if (items.length === 0) {
     return (
-      <div className="container" style={{ padding: '32px 0' }}>
+      <div className="container feed-empty-container">
         <EmptyState
           icon="🧭"
           title="Bảng tin của bạn đang trống"
@@ -50,31 +50,27 @@ export function FeedPage() {
   }
 
   return (
-    <div className="feed-page stack" style={{ maxWidth: '640px', margin: '0 auto', width: '100%', padding: '16px 0' }}>
-      <div className="posts-list stack" style={{ gap: '20px' }}>
+    <div className="feed-page stack">
+      <div className="posts-list stack feed-posts">
         {items.map((post) => (
           <PostCard key={post._id} post={post} />
         ))}
       </div>
 
       {hasMore && (
-        <div
-          ref={sentinelRef}
-          className="feed-sentinel"
-          style={{ minHeight: '48px', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px 0' }}
-        >
+        <div ref={sentinelRef} className="feed-sentinel">
           {loading && <Spinner size="md" />}
         </div>
       )}
 
       {!hasMore && (
-        <div className="muted small text-center" style={{ padding: '24px 0', textAlign: 'center' }}>
+        <div className="muted small text-center feed-end">
           Bạn đã xem hết
         </div>
       )}
 
       {error && (
-        <div className="alert alert-error" style={{ margin: '16px 0' }}>
+        <div className="alert alert-error feed-alert">
           {error}
         </div>
       )}

@@ -48,11 +48,10 @@ export function LikeButton({ postId, initialLiked = false, initialCount = 0, cla
   };
 
   return (
-    <span className="like-btn-wrapper" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+    <span className="like-btn-wrapper">
       <button
         type="button"
-        className={`btn btn-ghost like-btn ${className}`}
-        style={{ color: likedByMe ? 'var(--like)' : 'inherit' }}
+        className={`btn btn-ghost like-btn ${likedByMe ? 'liked' : ''} ${className}`}
         disabled={isPending}
         onClick={handleClick}
         title={likedByMe ? 'Bỏ thích' : 'Thích'}
@@ -60,7 +59,7 @@ export function LikeButton({ postId, initialLiked = false, initialCount = 0, cla
         <span>{likedByMe ? '❤️' : '🤍'}</span>
         <span>{likeCount}</span>
       </button>
-      {error && <span className="field-error" style={{ fontSize: '0.8rem' }}>{error}</span>}
+      {error && <span className="field-error like-error">{error}</span>}
     </span>
   );
 }

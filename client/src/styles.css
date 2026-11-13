@@ -331,3 +331,47 @@ a.btn:hover { text-decoration: none; }
   .admin-side .icon-btn { margin-top: 0; margin-left: auto; }
   .admin-main { padding: 16px; }
 }
+
+/* ===== Bảng tin & LikeButton (C6, C7) ===== */
+.like-btn-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.like-btn.liked {
+  color: var(--like);
+}
+.like-error {
+  font-size: 0.8rem;
+}
+
+.feed-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 16px 0;
+}
+.feed-posts {
+  gap: 20px;
+}
+.feed-sentinel {
+  min-height: 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 0;
+}
+.feed-end {
+  padding: 24px 0;
+  text-align: center;
+}
+.feed-alert {
+  margin: 16px 0;
+}
+.feed-empty-container {
+  padding: 32px 0;
+}
+.feed-error-container {
+  padding: 24px 0;
+}
+
