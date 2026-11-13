@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { FollowsModule } from '../follows/follows.module';
 import { PostAccessGuard } from './guards/post-access.guard';
+import { FeedController } from './feed.controller';
 import { PostsController } from './posts.controller';
 import { PostsService } from './posts.service';
 
@@ -9,7 +10,7 @@ import { PostsService } from './posts.service';
 // FollowsModule cần cho PostsService.visibilityFilter / findOneForViewer (lấy danh sách theo dõi).
 @Module({
   imports: [FollowsModule],
-  controllers: [PostsController],
+  controllers: [PostsController, FeedController],
   providers: [PostsService, PostAccessGuard],
   exports: [PostsService, PostAccessGuard],
 })

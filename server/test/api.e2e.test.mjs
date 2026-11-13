@@ -500,3 +500,175 @@ describe('Định dạng lỗi', () => {
     assert.ok(invalid.body.error.details.username && invalid.body.error.details.email && invalid.body.error.details.password);
   });
 });
+
+describe('Thích và bỏ thích bài viết (F06, C4 - BR02, BR08, BR20, BR01)', () => {
+  const publicPost = { ...basePost, title: 'Bài test like', visibility: 'public' };
+  const followersPost = { ...basePost, title: 'Bài followers test like', visibility: 'followers' };
+
+  async function makePost(token, fields) {
+    const r = await api('POST', '/posts', { token, form: fileForm('images', [png], fields) });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    return r.body;
+  }
+
+  test('Thích bài viết lần đầu -> 201 likeCount tăng, bỏ thích -> 200 likeCount giảm', async () => {
+    const author = await register('lkauthor');
+    const viewer = await register('lkviewer');
+    const post = await makePost(author.token, publicPost);
+
+    const like = await api('POST', `/posts/${post._id}/likes`, { token: viewer.token });
+    assert.equal(like.status, 201);
+    assert.equal(like.body.liked, true);
+    assert.equal(like.body.likeCount, 1);
+
+    const unlike = await api('DELETE', `/posts/${post._id}/likes`, { token: viewer.token });
+    assert.equal(unlike.status, 200);
+    assert.equal(unlike.body.liked, false);
+    assert.equal(unlike.body.likeCount, 0);
+  });
+
+  test('Thích lại lần 2 -> 409 ALREADY_LIKED (BR02)', async () => {
+    const author = await register('lkauthor2');
+    const viewer = await register('lkviewer2');
+    const post = await makePost(author.token, publicPost);
+
+    const first = await api('POST', `/posts/${post._id}/likes`, { token: viewer.token });
+    assert.equal(first.status, 201);
+
+    const second = await api('POST', `/posts/${post._id}/likes`, { token: viewer.token });
+    assert.equal(second.status, 409);
+    assert.equal(second.body.error?.code, 'ALREADY_LIKED');
+  });
+
+  test('Bỏ thích khi chưa thích -> 404 NOT_LIKED', async () => {
+    const author = await register('lkauthor3');
+    const viewer = await register('lkviewer3');
+    const post = await makePost(author.token, publicPost);
+
+    const res = await api('DELETE', `/posts/${post._id}/likes`, { token: viewer.token });
+    assert.equal(res.status, 404);
+    assert.equal(res.body.error?.code, 'NOT_LIKED');
+  });
+
+  test('Admin không được thích bài viết -> 403 FORBIDDEN_ROLE (BR20)', async () => {
+    const author = await register('lkauthor4');
+    const post = await makePost(author.token, publicPost);
+
+    const res = await api('POST', `/posts/${post._id}/likes`, { token: admin });
+    assert.equal(res.status, 403);
+    assert.equal(res.body.error?.code, 'FORBIDDEN_ROLE');
+  });
+
+  test('Người lạ không được thích bài followers khi chưa theo dõi -> 404 (BR01)', async () => {
+    const author = await register('lkauthor5');
+    const stranger = await register('lkstranger');
+    const post = await makePost(author.token, followersPost);
+
+    const res = await api('POST', `/posts/${post._id}/likes`, { token: stranger.token });
+    assert.equal(res.status, 404);
+  });
+});
+
+describe('Bảng tin phân trang bằng con trỏ (F07, C5 - BR12)', () => {
+  const feedPost = (title) => ({ ...basePost, title, visibility: 'public' });
+
+  async function createPost(token, title) {
+    const r = await api('POST', '/posts', { token, form: fileForm('images', [png], feedPost(title)) });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    return r.body;
+  }
+
+  test('Không đăng nhập -> 401; admin -> 403 (BR20)', async () => {
+    const unauth = await api('GET', '/feed');
+    assert.equal(unauth.status, 401);
+
+    const asAdmin = await api('GET', '/feed', { token: admin });
+    assert.equal(asAdmin.status, 403);
+    assert.equal(asAdmin.body.error?.code, 'FORBIDDEN_ROLE');
+  });
+
+  test('Cursor rác hoặc không hợp lệ -> 400 INVALID_CURSOR', async () => {
+    const u = await register('feed_cur');
+    const r1 = await api('GET', '/feed?cursor=cursor_rac_khong_hop_le', { token: u.token });
+    assert.equal(r1.status, 400);
+    assert.equal(r1.body.error?.code, 'INVALID_CURSOR');
+
+    const r2 = await api('GET', '/feed?cursor=12345', { token: u.token });
+    assert.equal(r2.status, 400);
+    assert.equal(r2.body.error?.code, 'INVALID_CURSOR');
+  });
+
+  test('Phân trang con trỏ: trang 1 và 2 không lặp; đăng bài mới lúc ở trang 2 thì trang 3 không lặp và không sót', async () => {
+    const viewer = await register('fdviewer');
+    const followed = await register('fdfollowed');
+    const stranger = await register('fdstranger');
+
+    const followRes = await api('POST', '/follows', { token: viewer.token, json: { userId: followed.user._id } });
+    assert.equal(followRes.status, 201);
+
+    await createPost(stranger.token, 'Stranger Post 1');
+    await createPost(stranger.token, 'Stranger Post 2');
+
+    await createPost(viewer.token, 'My Post 1');
+    await sleep(20);
+    await createPost(viewer.token, 'My Post 2');
+    await sleep(20);
+
+    await createPost(followed.token, 'Followed Post 1');
+    await sleep(20);
+    await createPost(followed.token, 'Followed Post 2');
+    await sleep(20);
+    await createPost(followed.token, 'Followed Post 3');
+    await sleep(20);
+    await createPost(followed.token, 'Followed Post 4');
+    await sleep(20);
+    await createPost(followed.token, 'Followed Post 5');
+
+    const p1 = await api('GET', '/feed?limit=3', { token: viewer.token });
+    assert.equal(p1.status, 200);
+    assert.equal(p1.body.items.length, 3);
+    assert.equal(p1.body.hasMore, true);
+    assert.ok(p1.body.nextCursor);
+
+    const firstItem = p1.body.items[0];
+    assert.ok(firstItem._id);
+    assert.ok(firstItem.author?.username);
+    assert.equal(typeof firstItem.likedByMe, 'boolean');
+
+    const p1Ids = p1.body.items.map((i) => i._id);
+
+    const p2 = await api('GET', `/feed?limit=3&cursor=${p1.body.nextCursor}`, { token: viewer.token });
+    assert.equal(p2.status, 200);
+    assert.equal(p2.body.items.length, 3);
+    assert.equal(p2.body.hasMore, true);
+    assert.ok(p2.body.nextCursor);
+
+    const p2Ids = p2.body.items.map((i) => i._id);
+
+    for (const id of p1Ids) {
+      assert.equal(p2Ids.includes(id), false);
+    }
+
+    await sleep(20);
+    const newPost = await createPost(followed.token, 'Brand New Post After Page 2');
+
+    const p3 = await api('GET', `/feed?limit=3&cursor=${p2.body.nextCursor}`, { token: viewer.token });
+    assert.equal(p3.status, 200);
+    assert.equal(p3.body.items.length, 1);
+    assert.equal(p3.body.hasMore, false);
+    assert.equal(p3.body.nextCursor, null);
+
+    const p3Ids = p3.body.items.map((i) => i._id);
+
+    for (const id of p3Ids) {
+      assert.equal(p1Ids.includes(id), false);
+      assert.equal(p2Ids.includes(id), false);
+    }
+    assert.equal(p3Ids.includes(newPost._id), false);
+
+    const allFetchedIds = [...p1Ids, ...p2Ids, ...p3Ids];
+    assert.equal(allFetchedIds.length, 7);
+    const uniqueIds = new Set(allFetchedIds);
+    assert.equal(uniqueIds.size, 7);
+  });
+});

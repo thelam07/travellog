@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { setSessionExpiredHandler, TOKEN_KEY, tokenStorage, type SessionEndReason } from '../api/client';
 import { authApi, type Credentials } from '../api/auth';
 import { useNotificationStore } from '../stores/useNotificationStore';
+import { useFeedStore } from '../stores/useFeedStore';
 import type { AuthResponse, User } from '../types';
 
 interface AuthContextValue {
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 // Đổi người dùng thì xoá dữ liệu của người trước (C thêm reset bảng tin vào đây)
 function resetStores() {
   useNotificationStore.getState().reset();
+  useFeedStore.getState().reset();
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
