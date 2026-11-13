@@ -11,6 +11,7 @@ import MainLayout from './layouts/MainLayout';
 import RootLayout from './layouts/RootLayout';
 import ChangePasswordPage from './pages/ChangePasswordPage';
 import EditProfilePage from './pages/EditProfilePage';
+import FeedPage from './pages/FeedPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import NotificationsPage from './pages/NotificationsPage';
@@ -37,7 +38,7 @@ export const router = createBrowserRouter([
       {
         element: <MainLayout />,
         children: [
-          { index: true, element: <HomeRoute feed={<PlaceholderPage title="Bảng tin" />} /> }, // C
+          { index: true, element: <HomeRoute feed={<FeedPage />} /> },
           { path: 'explore', element: <PlaceholderPage title="Khám phá" /> }, // B
           { path: 'u/:username', element: <ProfilePage /> },
           { path: 'notifications', element: <RequireRole role="member"><NotificationsPage /></RequireRole> },

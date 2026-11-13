@@ -568,3 +568,107 @@ describe('Thích và bỏ thích bài viết (F06, C4 - BR02, BR08, BR20, BR01)'
     assert.equal(res.status, 404);
   });
 });
+
+describe('Bảng tin phân trang bằng con trỏ (F07, C5 - BR12)', () => {
+  const feedPost = (title) => ({ ...basePost, title, visibility: 'public' });
+
+  async function createPost(token, title) {
+    const r = await api('POST', '/posts', { token, form: fileForm('images', [png], feedPost(title)) });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    return r.body;
+  }
+
+  test('Không đăng nhập -> 401; admin -> 403 (BR20)', async () => {
+    const unauth = await api('GET', '/feed');
+    assert.equal(unauth.status, 401);
+
+    const asAdmin = await api('GET', '/feed', { token: admin });
+    assert.equal(asAdmin.status, 403);
+    assert.equal(asAdmin.body.error?.code, 'FORBIDDEN_ROLE');
+  });
+
+  test('Cursor rác hoặc không hợp lệ -> 400 INVALID_CURSOR', async () => {
+    const u = await register('feed_cur');
+    const r1 = await api('GET', '/feed?cursor=cursor_rac_khong_hop_le', { token: u.token });
+    assert.equal(r1.status, 400);
+    assert.equal(r1.body.error?.code, 'INVALID_CURSOR');
+
+    const r2 = await api('GET', '/feed?cursor=12345', { token: u.token });
+    assert.equal(r2.status, 400);
+    assert.equal(r2.body.error?.code, 'INVALID_CURSOR');
+  });
+
+  test('Phân trang con trỏ: trang 1 và 2 không lặp; đăng bài mới lúc ở trang 2 thì trang 3 không lặp và không sót', async () => {
+    const viewer = await register('fdviewer');
+    const followed = await register('fdfollowed');
+    const stranger = await register('fdstranger');
+
+    const followRes = await api('POST', '/follows', { token: viewer.token, json: { userId: followed.user._id } });
+    assert.equal(followRes.status, 201);
+
+    await createPost(stranger.token, 'Stranger Post 1');
+    await createPost(stranger.token, 'Stranger Post 2');
+
+    await createPost(viewer.token, 'My Post 1');
+    await sleep(20);
+    await createPost(viewer.token, 'My Post 2');
+    await sleep(20);
+
+    await createPost(followed.token, 'Followed Post 1');
+    await sleep(20);
+    await createPost(followed.token, 'Followed Post 2');
+    await sleep(20);
+    await createPost(followed.token, 'Followed Post 3');
+    await sleep(20);
+    await createPost(followed.token, 'Followed Post 4');
+    await sleep(20);
+    await createPost(followed.token, 'Followed Post 5');
+
+    const p1 = await api('GET', '/feed?limit=3', { token: viewer.token });
+    assert.equal(p1.status, 200);
+    assert.equal(p1.body.items.length, 3);
+    assert.equal(p1.body.hasMore, true);
+    assert.ok(p1.body.nextCursor);
+
+    const firstItem = p1.body.items[0];
+    assert.ok(firstItem._id);
+    assert.ok(firstItem.author?.username);
+    assert.equal(typeof firstItem.likedByMe, 'boolean');
+
+    const p1Ids = p1.body.items.map((i) => i._id);
+
+    const p2 = await api('GET', `/feed?limit=3&cursor=${p1.body.nextCursor}`, { token: viewer.token });
+    assert.equal(p2.status, 200);
+    assert.equal(p2.body.items.length, 3);
+    assert.equal(p2.body.hasMore, true);
+    assert.ok(p2.body.nextCursor);
+
+    const p2Ids = p2.body.items.map((i) => i._id);
+
+    for (const id of p1Ids) {
+      assert.equal(p2Ids.includes(id), false);
+    }
+
+    await sleep(20);
+    const newPost = await createPost(followed.token, 'Brand New Post After Page 2');
+
+    const p3 = await api('GET', `/feed?limit=3&cursor=${p2.body.nextCursor}`, { token: viewer.token });
+    assert.equal(p3.status, 200);
+    assert.equal(p3.body.items.length, 1);
+    assert.equal(p3.body.hasMore, false);
+    assert.equal(p3.body.nextCursor, null);
+
+    const p3Ids = p3.body.items.map((i) => i._id);
+
+    for (const id of p3Ids) {
+      assert.equal(p1Ids.includes(id), false);
+      assert.equal(p2Ids.includes(id), false);
+    }
+    assert.equal(p3Ids.includes(newPost._id), false);
+
+    const allFetchedIds = [...p1Ids, ...p2Ids, ...p3Ids];
+    assert.equal(allFetchedIds.length, 7);
+    const uniqueIds = new Set(allFetchedIds);
+    assert.equal(uniqueIds.size, 7);
+  });
+});
