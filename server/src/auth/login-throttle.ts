@@ -1,7 +1,8 @@
 import { ThrottlerModuleOptions } from '@nestjs/throttler';
 
 // IP người dùng. Trên Render request đi qua Cloudflare và nhiều lớp proxy nên req.ip (kể cả khi đặt trust proxy) là IP
-// máy trung gian, đổi theo từng request. Cloudflare luôn gắn CF-Connecting-IP = IP người dùng và ghi đè nếu client tự gửi.
+// máy trung gian, đổi theo từng request. Cloudflare luôn gắn CF-Connecting-IP = IP người dùng. Client tự gửi header này
+// thì Cloudflare chặn luôn (đo trên web thật 10/11/2026: 403 từ Cloudflare, request không tới server), nên không giả được.
 // Chạy trên máy không qua Cloudflare thì không có header này → dùng req.ip.
 const clientIp = (req: Record<string, any>): string => {
   const cf = req.headers?.['cf-connecting-ip'];
