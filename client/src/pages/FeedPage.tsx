@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Link } from 'react-router';
+import { useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router';
 import { EmptyState } from '../components/EmptyState';
 import { PostCard } from '../components/PostCard';
 import { PageSpinner, Spinner } from '../components/Spinner';
@@ -17,6 +17,17 @@ export function FeedPage() {
   useEffect(() => {
     loadFirst();
   }, [loadFirst]);
+
+  // Đang ở bảng tin mà bấm logo hoặc "Bảng tin": React Router tạo location.key mới (cùng đường dẫn "/")
+  // nên trang không mount lại. Bắt thay đổi đó để cuộn lên đầu và tải lại trang đầu, thấy bài mới.
+  const location = useLocation();
+  const lastKey = useRef(location.key);
+  useEffect(() => {
+    if (location.key === lastKey.current) return;
+    lastKey.current = location.key;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    loadFirst();
+  }, [location.key, loadFirst]);
 
   const sentinelRef = useInfiniteScroll(loadMore, hasMore && !loading);
 

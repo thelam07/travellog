@@ -19,10 +19,12 @@ import PlaceholderPage from './pages/PlaceholderPage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/RegisterPage';
 
-// Trang chủ: khách → /explore, admin → /admin, thành viên → bảng tin (C thay PlaceholderPage bằng FeedPage).
+// Trang chủ: khách → /explore, admin → /admin, thành viên → bảng tin.
 function HomeRoute({ feed }: { feed: ReactNode }) {
-  const { user, ready } = useAuth();
+  const { user, ready, sessionEndReason } = useAuth();
   if (!ready) return <div className="page-loading">Đang tải…</div>;
+  // Vừa bị đẩy ra ngay trên bảng tin (bị khoá, hết phiên): về trang đăng nhập để thấy lý do, không lặng lẽ sang /explore
+  if (!user && sessionEndReason) return <Navigate to="/login" replace state={{ from: '/' }} />;
   if (!user) return <Navigate to="/explore" replace />;
   if (user.role === 'admin') return <Navigate to="/admin" replace />;
   return <>{feed}</>;
