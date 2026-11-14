@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { Avatar } from './Avatar';
 
 /** Menu tài khoản trên header: gom trang cá nhân, sửa hồ sơ, đổi mật khẩu, đăng xuất vào nút avatar. */
 export default function UserMenu() {
   const { user, isMember, isAdmin, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -41,6 +39,7 @@ export default function UserMenu() {
         onClick={() => setOpen((o) => !o)}
       >
         <Avatar user={user} size="sm" />
+        <span className="user-menu-name desktop-only">{user.displayName || user.username}</span>
       </button>
       {open && (
         <div className="user-menu-list" role="menu">
@@ -56,9 +55,6 @@ export default function UserMenu() {
           )}
           {isAdmin && <Link role="menuitem" to="/admin">Quản trị</Link>}
           <Link role="menuitem" to="/settings/password">Đổi mật khẩu</Link>
-          <button type="button" role="menuitem" onClick={toggleTheme}>
-            {theme === 'dark' ? '☀️ Giao diện sáng' : '🌙 Giao diện tối'}
-          </button>
           <button type="button" role="menuitem" onClick={logout}>
             Đăng xuất
           </button>
