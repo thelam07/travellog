@@ -1,14 +1,17 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AuthUser } from '../common/auth-user';
 import { clampLimit, CURSOR_SORT, cursorFilter, toCursorPage } from '../common/utils/cursor';
 import { FollowsService } from '../follows/follows.service';
 import { Like } from '../likes/schemas/like.schema';
+import { Comment } from '../comments/schemas/comment.schema';
+import { Notification } from '../notifications/schemas/notification.schema';
+import { Report } from '../reports/schemas/report.schema';
 import { StorageService } from '../common/storage/storage.service';
 import { toUserSummary } from '../users/user.mapper';
-import { CreatePostDto } from './dto/post.dto';
-import { Post, PostDocument } from './schemas/post.schema';
+import { CreatePostDto, UpdatePostDto } from './dto/post.dto';
+import { Post, PostDocument, PostImage } from './schemas/post.schema';
 
 const MAX_IMAGES = 6;
 
@@ -19,6 +22,9 @@ export class PostsService {
   constructor(
     @InjectModel(Post.name) private readonly postModel: Model<PostDocument>,
     @InjectModel(Like.name) private readonly likeModel: Model<Like>,
+    @InjectModel(Comment.name) private readonly commentModel: Model<Comment>,
+    @InjectModel(Notification.name) private readonly notificationModel: Model<Notification>,
+    @InjectModel(Report.name) private readonly reportModel: Model<Report>,
     private readonly storage: StorageService,
     private readonly follows: FollowsService,
   ) {}
@@ -91,6 +97,100 @@ export class PostsService {
     return this.postModel.findOne({ _id: id, ...filter }).exec();
   }
 
+  // Tải bài theo id KHÔNG qua visibilityFilter — dùng cho OwnershipGuard cần biết author
+  // kể cả khi bài hidden / authorLocked.
+  async findByIdRaw(id: string): Promise<PostDocument | null> {
+    return this.postModel.findById(id).exec();
+  }
+
+  // BR06 + BR15: sửa bài. OwnershipGuard đã chặn quyền trước khi vào đây.
+  // - keepImageIds: chuỗi JSON mảng _id ảnh cũ muốn giữ; không gửi = giữ tất cả.
+  // - Ảnh mới qua files. Tổng ảnh giữ + ảnh mới > 6 → 400.
+  // - Cập nhật bằng post.save() để hook pre('validate') tính lại hashtags và nameKey.
+  // - Ảnh bị bỏ chỉ xoá khỏi kho SAU khi lưu thành công; lưu lỗi thì xoá ảnh mới vừa upload.
+  async update(
+    post: PostDocument,
+    dto: UpdatePostDto,
+    files: Express.Multer.File[],
+  ): Promise<PostDocument> {
+    // 1. Tính danh sách ảnh giữ lại.
+    const keepIds = this.parseKeepImageIds(dto.keepImageIds, post.images);
+    const keptImages = keepIds === null
+      ? [...post.images]
+      : post.images.filter((img) => img._id && keepIds.has(String(img._id)));
+    const removedImages = keepIds === null
+      ? []
+      : post.images.filter((img) => !img._id || !keepIds.has(String(img._id)));
+
+    // 2. Upload ảnh mới (nếu có).
+    const newFiles = files ?? [];
+    if (keptImages.length + newFiles.length > MAX_IMAGES) {
+      throw new BadRequestException({
+        code: 'TOO_MANY_IMAGES',
+        message: `Mỗi bài tối đa ${MAX_IMAGES} ảnh (đang giữ ${keptImages.length}, thêm ${newFiles.length})`,
+      });
+    }
+    const uploaded = newFiles.length ? await this.storage.uploadMany(newFiles, 'posts') : [];
+
+    // 3. Cập nhật các trường nếu có.
+    if (dto.title !== undefined) post.title = dto.title;
+    if (dto.content !== undefined) post.content = dto.content;
+    if (dto.tripDate !== undefined) post.tripDate = dto.tripDate;
+    if (dto.cost !== undefined) post.cost = dto.cost;
+    if (dto.visibility !== undefined) post.visibility = dto.visibility;
+    if (dto.location !== undefined) {
+      post.location = {
+        name: dto.location.name,
+        placeId: dto.location.placeId ?? null,
+        address: dto.location.address ?? null,
+        lat: dto.location.lat ?? null,
+        lng: dto.location.lng ?? null,
+        // nameKey sẽ được hook pre('validate') tự tính lại.
+        nameKey: post.location.nameKey,
+      };
+    }
+
+    // 4. Gộp ảnh: giữ cũ + mới.
+    const finalImages: PostImage[] = [
+      ...keptImages,
+      ...uploaded.map((u) => ({ url: u.url, publicId: u.publicId } as PostImage)),
+    ];
+    post.images = finalImages;
+
+    // 5. Lưu (hook pre('validate') tính lại hashtags + nameKey).
+    try {
+      await post.save();
+    } catch (err) {
+      // Lưu lỗi: dọn ảnh mới vừa upload rồi ném tiếp.
+      await this.storage.removeMany(uploaded.map((u) => u.publicId));
+      throw err;
+    }
+
+    // 6. Lưu thành công: xoá ảnh cũ bị bỏ khỏi kho.
+    if (removedImages.length) {
+      await this.storage.removeMany(removedImages.map((img) => img.publicId));
+    }
+
+    return post;
+  }
+
+  // BR06 + BR07: xoá bài. OwnershipGuard đã chặn quyền trước khi vào đây.
+  // Xoá bài + likes + comments + notifications + reports có post = bài này, rồi xoá ảnh trong kho.
+  async remove(post: PostDocument): Promise<void> {
+    const postId = post._id;
+    await Promise.all([
+      this.likeModel.deleteMany({ post: postId }).exec(),
+      this.commentModel.deleteMany({ post: postId }).exec(),
+      this.notificationModel.deleteMany({ post: postId }).exec(),
+      this.reportModel.deleteMany({ post: postId }).exec(),
+    ]);
+    await post.deleteOne();
+    // Xoá ảnh sau cùng (nếu lỗi thì ảnh mồ côi, không ảnh hưởng DB).
+    if (post.images.length) {
+      await this.storage.removeMany(post.images.map((img) => img.publicId));
+    }
+  }
+
   // Serialize một bài viết theo api-contract: author là UserSummary, likedByMe tính theo bảng likes.
   async toClient(post: PostDocument, viewer?: AuthUser) {
     const author = await this.postModel.populate(post, { path: 'author', select: 'username displayName avatar' });
@@ -143,5 +243,38 @@ export class PostsService {
       nextCursor: page.nextCursor,
       hasMore: page.hasMore,
     };
+  }
+
+  // Parse chuỗi JSON keepImageIds thành Set<string>. Trả null nếu không gửi (nghĩa là giữ tất cả).
+  // Ném 400 nếu chuỗi không phải JSON hợp lệ hoặc chứa _id không thuộc bài.
+  private parseKeepImageIds(raw: string | undefined, currentImages: PostImage[]): Set<string> | null {
+    if (raw === undefined || raw === null || raw === '') return null; // giữ tất cả
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      throw new BadRequestException({
+        code: 'INVALID_KEEP_IMAGE_IDS',
+        message: 'keepImageIds phải là chuỗi JSON mảng _id ảnh',
+      });
+    }
+    if (!Array.isArray(parsed)) {
+      throw new BadRequestException({
+        code: 'INVALID_KEEP_IMAGE_IDS',
+        message: 'keepImageIds phải là mảng _id ảnh',
+      });
+    }
+    const validIds = new Set(currentImages.map((img) => img._id && String(img._id)));
+    const keep = new Set<string>();
+    for (const id of parsed) {
+      if (typeof id !== 'string' || !validIds.has(id)) {
+        throw new BadRequestException({
+          code: 'INVALID_KEEP_IMAGE_IDS',
+          message: 'keepImageIds chứa _id không thuộc bài viết',
+        });
+      }
+      keep.add(id);
+    }
+    return keep;
   }
 }

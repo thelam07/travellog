@@ -672,3 +672,101 @@ describe('Bảng tin phân trang bằng con trỏ (F07, C5 - BR12)', () => {
     assert.equal(uniqueIds.size, 7);
   });
 });
+
+describe('Sửa và xoá bài (B7, BR06/BR07/BR15)', () => {
+  async function makePost(token, fields, files = [png, png]) {
+    const r = await api('POST', '/posts', { token, form: fileForm('images', files, fields) });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    return r.body;
+  }
+
+  test('BR06: người khác PATCH / DELETE bài → 403 NOT_OWNER; id sai / không tồn tại → 404', async () => {
+    const author = await register('uauthor');
+    const other = await register('uother');
+    const post = await makePost(author.token, { ...basePost, title: 'Bài BR06' });
+    const patch = await api('PATCH', `/posts/${post._id}`, { token: other.token, form: fileForm('images', [], { title: 'Hack' }) });
+    assert.equal(patch.status, 403);
+    assert.equal(patch.body.error.code, 'NOT_OWNER');
+    const del = await api('DELETE', `/posts/${post._id}`, { token: other.token });
+    assert.equal(del.status, 403);
+    assert.equal(del.body.error.code, 'NOT_OWNER');
+    assert.equal((await api('PATCH', '/posts/khong-phai-objectid', { token: author.token, form: fileForm('images', [], {}) })).status, 404);
+    assert.equal((await api('DELETE', '/posts/000000000000000000000000', { token: author.token })).status, 404);
+  });
+
+  test('BR15: giữ 1 ảnh + thêm 1 ảnh → bài còn 2 ảnh; ảnh bị bỏ mất khỏi uploads/', async () => {
+    const u = await register('upd1');
+    const post = await makePost(u.token, { ...basePost, title: 'Bài BR15 giữ 1 thêm 1' });
+    assert.equal(post.images.length, 2);
+    const keepId = post.images[0]._id;
+    const removedPublicId = post.images[1].publicId;
+    const r = await api('PATCH', `/posts/${post._id}`, {
+      token: u.token,
+      form: fileForm('images', [png], { keepImageIds: JSON.stringify([keepId]) }),
+    });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.images.length, 2);
+    assert.equal(r.body.images[0]._id, keepId);
+    // Ảnh bị bỏ phải mất khỏi uploads/ (chỉ kiểm khi chạy local, không có Cloudinary).
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      const { existsSync } = await import('node:fs');
+      const path = `uploads/posts/${removedPublicId}`;
+      assert.equal(existsSync(path), false, `Ảnh ${path} vẫn còn trong uploads/`);
+    }
+  });
+
+  test('BR15: giữ 2 + thêm 5 → 400 TOO_MANY_IMAGES', async () => {
+    const u = await register('upd2');
+    const post = await makePost(u.token, { ...basePost, title: 'Bài BR15 quá ảnh' });
+    const keepIds = post.images.map((i) => i._id);
+    const r = await api('PATCH', `/posts/${post._id}`, {
+      token: u.token,
+      form: fileForm('images', Array(5).fill(png), { keepImageIds: JSON.stringify(keepIds) }),
+    });
+    assert.equal(r.status, 400);
+    assert.equal(r.body.error.code, 'TOO_MANY_IMAGES');
+  });
+
+  test('BR15: không gửi keepImageIds = giữ tất cả ảnh cũ; thêm 1 ảnh mới → tổng 3', async () => {
+    const u = await register('upd3');
+    const post = await makePost(u.token, { ...basePost, title: 'Bài BR15 giữ tất' });
+    const r = await api('PATCH', `/posts/${post._id}`, {
+      token: u.token,
+      form: fileForm('images', [png], { title: 'Sửa tiêu đề' }),
+    });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.images.length, 3);
+    assert.equal(r.body.title, 'Sửa tiêu đề');
+  });
+
+  test('BR15: keepImageIds chứa _id không thuộc bài → 400 INVALID_KEEP_IMAGE_IDS', async () => {
+    const u = await register('upd4');
+    const post = await makePost(u.token, { ...basePost, title: 'Bài BR15 id rác' });
+    const r = await api('PATCH', `/posts/${post._id}`, {
+      token: u.token,
+      form: fileForm('images', [], { keepImageIds: JSON.stringify(['000000000000000000000000']) }),
+    });
+    assert.equal(r.status, 400);
+    assert.equal(r.body.error.code, 'INVALID_KEEP_IMAGE_IDS');
+  });
+
+  test('BR06 + BR07: admin xoá được bài người khác; xoá xong GET bài → 404', async () => {
+    const author = await register('delauthor');
+    const post = await makePost(author.token, { ...basePost, title: 'Bài BR07 admin xoá' });
+    const del = await api('DELETE', `/posts/${post._id}`, { token: admin });
+    assert.equal(del.status, 200, JSON.stringify(del.body));
+    assert.equal(del.body.deleted, true);
+    const get = await api('GET', `/posts/${post._id}`);
+    assert.equal(get.status, 404);
+  });
+
+  test('BR07: chủ bài xoá bài của mình → 200; GET bài → 404', async () => {
+    const u = await register('delowner');
+    const post = await makePost(u.token, { ...basePost, title: 'Bài BR07 chủ xoá' });
+    const del = await api('DELETE', `/posts/${post._id}`, { token: u.token });
+    assert.equal(del.status, 200, JSON.stringify(del.body));
+    assert.equal(del.body.deleted, true);
+    const get = await api('GET', `/posts/${post._id}`);
+    assert.equal(get.status, 404);
+  });
+});

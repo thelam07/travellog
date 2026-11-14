@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { FollowsModule } from '../follows/follows.module';
+import { OwnershipGuard } from '../common/guards/ownership.guard';
 import { PostAccessGuard } from './guards/post-access.guard';
 import { FeedController } from './feed.controller';
 import { PostsController } from './posts.controller';
@@ -11,7 +12,7 @@ import { PostsService } from './posts.service';
 @Module({
   imports: [FollowsModule],
   controllers: [PostsController, FeedController],
-  providers: [PostsService, PostAccessGuard],
-  exports: [PostsService, PostAccessGuard],
+  providers: [PostsService, PostAccessGuard, OwnershipGuard],
+  exports: [PostsService, PostAccessGuard, OwnershipGuard],
 })
 export class PostsModule {}

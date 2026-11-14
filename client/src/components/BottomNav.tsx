@@ -20,6 +20,12 @@ export default function BottomNav() {
         <span>Khám phá</span>
       </NavLink>
       {/* B8: thêm nút "Đăng bài" (/posts/new) ở giữa khi có route. */}
+      {isMember && (
+        <NavLink to="/posts/new" className={cls}>
+          <span aria-hidden="true">✏️</span>
+          <span>Đăng bài</span>
+        </NavLink>
+      )}
       {isMember && <NotificationBell label poll={false} />}
       {isAdmin && (
         <NavLink to="/admin" className={cls}>
