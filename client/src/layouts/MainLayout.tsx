@@ -13,7 +13,7 @@ export default function MainLayout() {
     <div className="app">
       <header className="header">
         <div className="container header-inner">
-          <Link to="/" className="brand">TravelLog</Link>
+          <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true">✈</span>TravelLog</Link>
           <nav className="nav">
             {user && <NavLink to="/" end className="desktop-only">Bảng tin</NavLink>}
             <NavLink to="/explore" className="desktop-only">Khám phá</NavLink>

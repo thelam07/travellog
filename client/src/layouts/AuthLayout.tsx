@@ -6,7 +6,7 @@ export default function AuthLayout() {
   return (
     <div className="auth-page">
       <ThemeToggle />
-      <Link to="/" className="brand">TravelLog</Link>
+      <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true">✈</span>TravelLog</Link>
       <div className="card auth-card">
         <Outlet />
       </div>

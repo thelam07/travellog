@@ -8,7 +8,7 @@ export default function AdminLayout() {
   return (
     <div className="admin">
       <aside className="admin-side">
-        <Link to="/admin" className="brand">TravelLog Admin</Link>
+        <Link to="/admin" className="brand"><span className="brand-mark" aria-hidden="true">✈</span>TravelLog Admin</Link>
         <nav className="admin-nav">
           <NavLink to="/admin/reports">Báo cáo</NavLink>
           <NavLink to="/admin/users">Tài khoản</NavLink>
