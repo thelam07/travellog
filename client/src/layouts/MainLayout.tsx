@@ -23,9 +23,9 @@ export default function MainLayout() {
             {user ? (
               <>
                 {user.role === 'admin' && <NavLink to="/admin" className="desktop-only">Quản trị</NavLink>}
+                {/* Giống bản mẫu: 🌙 → 🔔 → avatar + tên (avatar ngoài cùng bên phải) */}
+                <ThemeToggle />
                 <NotificationBell />
-                {/* Avatar ngoài cùng bên phải như các mạng xã hội; điện thoại đổi sáng/tối trong menu tài khoản */}
-                <ThemeToggle className="desktop-only" />
                 <UserMenu />
               </>
             ) : (

@@ -61,7 +61,7 @@ a { color: var(--primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 h1, h2, h3 { line-height: 1.25; margin: 0 0 12px; }
 .muted { color: var(--text-muted); }
-.container { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+.container { width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -294,7 +294,12 @@ a.btn:hover { text-decoration: none; }
 /* ===== Menu tài khoản + giao diện điện thoại (A, việc 12) ===== */
 .nav { align-items: center; }
 .user-menu { position: relative; }
-.user-menu-btn { display: inline-flex; padding: 2px; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+.user-menu-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 3px 10px 3px 3px; border: 0; border-radius: 999px;
+  background: none; color: var(--text); font: inherit; font-weight: 600; cursor: pointer;
+}
+.user-menu-btn:hover { background: var(--surface-2); }
+.user-menu-name { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-menu-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .user-menu-list {
   position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; min-width: 220px;
@@ -314,6 +319,7 @@ a.btn:hover { text-decoration: none; }
 @media (max-width: 720px) {
   :root { --bottom-h: 60px; }
   .desktop-only, .header .bell { display: none !important; }
+  .user-menu-btn { padding: 2px; }
   .header-inner { gap: 8px; }
   .nav { gap: 8px; }
   .main { padding-top: 16px; padding-bottom: calc(var(--bottom-h) + 24px + env(safe-area-inset-bottom)); }
