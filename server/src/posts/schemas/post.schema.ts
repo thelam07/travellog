@@ -5,6 +5,9 @@ import { extractHashtags, normalizeKey } from '../../common/utils/text';
 // Mỗi ảnh có _id riêng để sửa bài giữ/bỏ từng ảnh (BR15).
 @Schema({ _id: true })
 export class PostImage {
+  // _id do Mongoose tự sinh (_id: true ở trên); khai báo để TypeScript biết khi truy cập img._id.
+  _id?: Types.ObjectId;
+
   @Prop({ type: String, required: true }) url: string;
   @Prop({ type: String, required: true }) publicId: string;
   @Prop({ type: Number }) width?: number;
