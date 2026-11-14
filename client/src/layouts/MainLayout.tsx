@@ -24,15 +24,17 @@ export default function MainLayout() {
               <>
                 {user.role === 'admin' && <NavLink to="/admin" className="desktop-only">Quản trị</NavLink>}
                 <NotificationBell />
+                {/* Avatar ngoài cùng bên phải như các mạng xã hội; điện thoại đổi sáng/tối trong menu tài khoản */}
+                <ThemeToggle className="desktop-only" />
                 <UserMenu />
               </>
             ) : (
               <>
                 <NavLink to="/login" className="desktop-only">Đăng nhập</NavLink>
                 <NavLink to="/register" className="desktop-only">Đăng ký</NavLink>
+                <ThemeToggle />
               </>
             )}
-            <ThemeToggle />
           </nav>
         </div>
       </header>
