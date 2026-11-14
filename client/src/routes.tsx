@@ -16,6 +16,7 @@ import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import NotificationsPage from './pages/NotificationsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import PostDetailPage from './pages/PostDetailPage';
 import PostFormPage from './pages/PostFormPage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/RegisterPage';
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
           { path: 'settings/profile', element: <RequireRole role="member"><EditProfilePage /></RequireRole> },
           { path: 'settings/password', element: <RequireAuth><ChangePasswordPage /></RequireAuth> },
           { path: 'posts/new', element: <RequireRole role="member"><PostFormPage /></RequireRole> },
+          { path: 'posts/:id', element: <PostDetailPage /> },
           { path: 'posts/:id/edit', element: <RequireRole role="member"><PostFormPage /></RequireRole> },
         ],
       },

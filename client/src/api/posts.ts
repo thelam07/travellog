@@ -76,4 +76,10 @@ export const postsApi = {
     const res = await api.patch<Post>(`/posts/${id}`, form);
     return res.data;
   },
+
+  /** Xoá bài. Server: DELETE /api/posts/:id */
+  deletePost: async (id: string): Promise<{ deleted: boolean }> => {
+    const res = await api.delete<{ deleted: boolean }>(`/posts/${id}`);
+    return res.data;
+  },
 };
