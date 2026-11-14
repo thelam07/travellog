@@ -19,10 +19,10 @@ export default function BottomNav() {
         <span aria-hidden="true">🧭</span>
         <span>Khám phá</span>
       </NavLink>
-      {/* B8: thêm nút "Đăng bài" (/posts/new) ở giữa khi có route. */}
+      {/* Nút "Đăng bài" ở giữa, nổi bật bằng vòng tròn màu chủ đạo (nav-primary). */}
       {isMember && (
-        <NavLink to="/posts/new" className={cls}>
-          <span aria-hidden="true">✏️</span>
+        <NavLink to="/posts/new" className={(s) => `${cls(s)} nav-primary`}>
+          <span aria-hidden="true">＋</span>
           <span>Đăng bài</span>
         </NavLink>
       )}
