@@ -1,8 +1,12 @@
 // client/src/hooks/useFetch.ts
 // Hook fetch dữ liệu qua axios `api` (có gắn token tự động), huỷ request bằng AbortController
 // khi unmount hoặc url đổi. Trả về { data, loading, error, reload }.
+//
+// StrictMode chạy effect 2 lần: lần đầu bị huỷ ném CanceledError của axios (không phải DOMException).
+// Dùng biến `active` riêng cho mỗi lần chạy để tránh lỗi huỷ ghi đè dữ liệu.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import axios from 'axios';
 import { api, parseError } from '../api/client';
 
 export interface UseFetchResult<T> {
@@ -17,12 +21,10 @@ export function useFetch<T>(url: string | null): UseFetchResult<T> {
   const [loading, setLoading] = useState(Boolean(url));
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
-  const cancelledRef = useRef(false);
 
   const reload = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
-    cancelledRef.current = false;
     if (!url) {
       setData(null);
       setLoading(false);
@@ -31,26 +33,27 @@ export function useFetch<T>(url: string | null): UseFetchResult<T> {
     }
 
     const controller = new AbortController();
+    let active = true;
     setLoading(true);
     setError(null);
 
     api
       .get<T>(url, { signal: controller.signal })
       .then((res) => {
-        if (cancelledRef.current) return;
-        setData(res.data);
-        setLoading(false);
+        if (active) {
+          setData(res.data);
+          setError(null);
+          setLoading(false);
+        }
       })
       .catch((err: unknown) => {
-        if (cancelledRef.current) return;
-        // Bỏ qua lỗi do huỷ request (AbortError / axios isCancel) — không phải lỗi thật
-        if (err instanceof DOMException && err.name === 'AbortError') return;
+        if (!active || axios.isCancel(err)) return;
         setError(parseError(err).message);
         setLoading(false);
       });
 
     return () => {
-      cancelledRef.current = true;
+      active = false;
       controller.abort();
     };
   }, [url, tick]);
