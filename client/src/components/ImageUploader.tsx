@@ -1,7 +1,7 @@
 // client/src/components/ImageUploader.tsx
 // Chọn nhiều ảnh, xem trước, nút bỏ từng ảnh. Khi sửa bài: hiện ảnh cũ có nút bỏ, gọi onRemoveOld(id).
 
-import { useRef, type ChangeEvent } from 'react';
+import { useRef, useState, type ChangeEvent } from 'react';
 import { useImagePreviews } from '../hooks/useImagePreviews';
 
 const ACCEPT = ['image/jpeg', 'image/png', 'image/webp'];
@@ -19,7 +19,7 @@ export interface ImageUploaderProps {
   /** Ảnh cũ của bài (chỉ khi sửa). Bỏ ảnh cũ = gọi onRemoveOld(_id) */
   oldImages?: OldImage[];
   onRemoveOld?: (id: string) => void;
-  /** Lỗi chung (vd: "tối đa 6 ảnh") */
+  /** Lỗi chung (vd: "tối đa 6 ảnh", "chỉ nhận JPG/PNG/WebP") */
   error?: string;
   /** Tổng số ảnh tối đa (mặc định 6) */
   maxCount?: number;
@@ -35,37 +35,50 @@ export function ImageUploader({
 }: ImageUploaderProps) {
   const input = useRef<HTMLInputElement>(null);
   const previews = useImagePreviews(files);
+  const [localError, setLocalError] = useState<string | null>(null);
   const total = files.length + oldImages.length;
   const canAdd = total < maxCount;
+  const shownError = error ?? localError;
 
   const pick = (e: ChangeEvent<HTMLInputElement>) => {
-    const list = e.target.files;
+    // ĐỌC FILE TRƯỚC, rồi mới xoá value — nếu xoá trước, FileList bị rỗng theo (Chrome).
+    const list = Array.from(e.target.files ?? []);
     e.target.value = ''; // chọn lại đúng file vẫn kích hoạt onChange
-    if (!list) return;
-    const next: File[] = [];
-    for (const f of Array.from(list)) {
+    if (!list.length) return;
+
+    const accepted: File[] = [];
+    const rejected: string[] = [];
+    for (const f of list) {
       if (!ACCEPT.includes(f.type)) {
-        alert('Chỉ nhận ảnh JPG, PNG hoặc WebP.');
+        rejected.push(`"${f.name}" không phải JPG/PNG/WebP`);
         continue;
       }
       if (f.size > MAX_SIZE) {
-        alert(`Ảnh "${f.name}" vượt quá 5 MB.`);
+        rejected.push(`"${f.name}" vượt quá 5 MB`);
         continue;
       }
-      next.push(f);
+      accepted.push(f);
     }
-    if (!next.length) return;
+
     const room = maxCount - total;
-    if (next.length > room) {
-      alert(`Chỉ thêm được ${room} ảnh nữa (tối đa ${maxCount}).`);
-      setFiles([...files, ...next.slice(0, room)]);
+    if (accepted.length > room) {
+      rejected.push(`Chỉ thêm được ${room} ảnh nữa (tối đa ${maxCount})`);
+      setFiles([...files, ...accepted.slice(0, room)]);
     } else {
-      setFiles([...files, ...next]);
+      setFiles([...files, ...accepted]);
     }
+
+    setLocalError(rejected.length ? rejected.join('; ') : null);
   };
 
   const removeNew = (idx: number) => {
     setFiles(files.filter((_, i) => i !== idx));
+    setLocalError(null);
+  };
+
+  const removeOld = (id: string) => {
+    onRemoveOld?.(id);
+    setLocalError(null);
   };
 
   return (
@@ -86,7 +99,7 @@ export function ImageUploader({
               type="button"
               className="image-uploader-remove"
               aria-label="Bỏ ảnh"
-              onClick={() => onRemoveOld?.(img._id)}
+              onClick={() => removeOld(img._id)}
             >
               ×
             </button>
@@ -118,7 +131,7 @@ export function ImageUploader({
       <div className="field-hint">
         JPG, PNG hoặc WebP, tối đa 5 MB mỗi ảnh · {total}/{maxCount} ảnh
       </div>
-      {error && <div className="field-error">{error}</div>}
+      {shownError && <div className="field-error">{shownError}</div>}
     </div>
   );
 }

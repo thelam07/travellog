@@ -132,9 +132,7 @@ export default function PostFormPage() {
       else if (n < 0) errs.cost = 'Chi phí phải ≥ 0.';
     }
 
-    if (files.length + oldImages.length === 0) {
-      errs.images = 'Vui lòng chọn ít nhất 1 ảnh.';
-    } else if (files.length + oldImages.length > MAX_IMAGES) {
+    if (files.length + oldImages.length > MAX_IMAGES) {
       errs.images = `Tối đa ${MAX_IMAGES} ảnh.`;
     }
 

@@ -17,6 +17,9 @@ export default function MainLayout() {
           <nav className="nav">
             {user && <NavLink to="/" end className="desktop-only">Bảng tin</NavLink>}
             <NavLink to="/explore" className="desktop-only">Khám phá</NavLink>
+            {user?.role === 'member' && (
+              <NavLink to="/posts/new" className="desktop-only">Đăng bài</NavLink>
+            )}
             {user ? (
               <>
                 {user.role === 'admin' && <NavLink to="/admin" className="desktop-only">Quản trị</NavLink>}
