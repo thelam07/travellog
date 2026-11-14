@@ -20,8 +20,6 @@ import { useFetch } from '../hooks/useFetch';
 import { timeAgo } from '../utils/format';
 import type { Post } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
 export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -30,8 +28,8 @@ export default function PostDetailPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const url = id ? `${API_BASE}/posts/${id}` : null;
-  const { data: post, loading, error, reload } = useFetch<Post>(url);
+  const url = id ? `/posts/${id}` : null;
+  const { data: post, loading, error } = useFetch<Post>(url);
 
   if (loading) return <PageSpinner />;
 
@@ -41,7 +39,7 @@ export default function PostDetailPage() {
         <EmptyState
           icon="🔍"
           title="Bài viết không tồn tại hoặc bạn không có quyền xem"
-          description={error ? parseError({ response: { data: { error: { message: error } } } }).message : undefined}
+          description={error ?? undefined}
           action={
             <Link to="/" className="btn btn-primary">
               Về trang chủ
@@ -160,11 +158,6 @@ export default function PostDetailPage() {
         onConfirm={handleDelete}
         onCancel={() => !deleting && setConfirmOpen(false)}
       />
-
-      {/* Nút reload nếu cần (ví dụ sau khi C thêm bình luận) */}
-      <button type="button" className="link-btn" onClick={reload} style={{ display: 'none' }}>
-        Tải lại
-      </button>
     </div>
   );
 }

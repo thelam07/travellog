@@ -1,8 +1,9 @@
 // client/src/hooks/useFetch.ts
-// Hook fetch dữ liệu từ URL, huỷ request bằng AbortController khi unmount hoặc url đổi.
-// Trả về { data, loading, error, reload }.
+// Hook fetch dữ liệu qua axios `api` (có gắn token tự động), huỷ request bằng AbortController
+// khi unmount hoặc url đổi. Trả về { data, loading, error, reload }.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { api, parseError } from '../api/client';
 
 export interface UseFetchResult<T> {
   data: T | null;
@@ -33,24 +34,18 @@ export function useFetch<T>(url: string | null): UseFetchResult<T> {
     setLoading(true);
     setError(null);
 
-    fetch(url, { signal: controller.signal })
-      .then(async (res) => {
-        if (!res.ok) {
-          const text = await res.text().catch(() => '');
-          throw new Error(text || `HTTP ${res.status}`);
-        }
-        return res.json() as Promise<T>;
-      })
-      .then((json) => {
+    api
+      .get<T>(url, { signal: controller.signal })
+      .then((res) => {
         if (cancelledRef.current) return;
-        setData(json);
+        setData(res.data);
         setLoading(false);
       })
       .catch((err: unknown) => {
         if (cancelledRef.current) return;
-        // Bỏ qua lỗi do huỷ request (AbortError) — không phải lỗi thật
+        // Bỏ qua lỗi do huỷ request (AbortError / axios isCancel) — không phải lỗi thật
         if (err instanceof DOMException && err.name === 'AbortError') return;
-        setError(err instanceof Error ? err.message : 'Đã có lỗi xảy ra.');
+        setError(parseError(err).message);
         setLoading(false);
       });
 
