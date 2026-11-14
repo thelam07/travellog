@@ -90,3 +90,57 @@ export class CreatePostDto {
   @IsIn(['public', 'followers'], { message: 'Chế độ hiển thị phải là public hoặc followers' })
   visibility!: 'public' | 'followers';
 }
+
+// BR15: sửa bài — mọi trường đều tuỳ chọn, thêm keepImageIds (chuỗi JSON mảng _id ảnh giữ lại).
+// Không dùng PartialType của @nestjs/mapped-types (chưa cài) — viết tay cho rõ và tuỳ biến message.
+export class UpdatePostDto {
+  @IsOptional()
+  @IsString({ message: 'Tiêu đề phải là chuỗi' })
+  @IsNotEmpty({ message: 'Tiêu đề không được trống' })
+  @MinLength(5, { message: 'Tiêu đề dài 5–120 kí tự' })
+  @MaxLength(120, { message: 'Tiêu đề dài 5–120 kí tự' })
+  title?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Nội dung phải là chuỗi' })
+  @IsNotEmpty({ message: 'Nội dung không được trống' })
+  @MaxLength(5000, { message: 'Nội dung tối đa 5000 kí tự' })
+  content?: string;
+
+  @IsOptional()
+  @IsObject({ message: 'Địa điểm không hợp lệ' })
+  @ValidateNested()
+  @Transform(({ obj }) => {
+    const raw = obj.location;
+    if (raw && typeof raw === 'string') {
+      try {
+        return plainToInstance(LocationDto, JSON.parse(raw));
+      } catch {
+        return raw;
+      }
+    }
+    return raw;
+  })
+  location?: LocationDto;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate({ message: 'Ngày đi không hợp lệ' })
+  @MaxDate(latestTripDate, { message: 'Ngày đi không được ở tương lai' })
+  tripDate?: Date;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Chi phí phải là số' })
+  @Min(0, { message: 'Chi phí phải ≥ 0' })
+  cost?: number;
+
+  @IsOptional()
+  @IsIn(['public', 'followers'], { message: 'Chế độ hiển thị phải là public hoặc followers' })
+  visibility?: 'public' | 'followers';
+
+  // BR15: chuỗi JSON mảng _id ảnh cũ muốn giữ. Không gửi = giữ tất cả.
+  @IsOptional()
+  @IsString({ message: 'keepImageIds phải là chuỗi JSON' })
+  keepImageIds?: string;
+}
