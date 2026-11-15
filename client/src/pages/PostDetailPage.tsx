@@ -112,7 +112,7 @@ export default function PostDetailPage() {
         <PostMeta location={post.location} tripDate={post.tripDate} cost={post.cost} />
 
         {/* Ảnh */}
-        {post.images.length > 0 && <PostGallery images={post.images} />}
+        {post.images.length > 0 && <PostGallery images={post.images} post={post} />}
 
         {/* Nội dung */}
         <div className="post-detail-content">

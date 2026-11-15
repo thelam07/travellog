@@ -1,24 +1,30 @@
 // client/src/components/PostGallery.tsx
 // Hiện ảnh lớn + hàng ảnh nhỏ để chọn. Nhấn ảnh nhỏ để đổi ảnh lớn.
+// (Mở rộng – A) Nhấn ảnh lớn để mở trình xem ảnh toàn màn hình.
 
 import { useState } from 'react';
-import type { PostImage } from '../types';
+import type { Post, PostImage } from '../types';
+import ImageViewer from './ImageViewer';
 
 export interface PostGalleryProps {
   images: PostImage[];
+  /** Truyền bài thì trình xem ảnh có cột bên phải: tác giả, nút Thích, bình luận */
+  post?: Post;
 }
 
-export function PostGallery({ images }: PostGalleryProps) {
+export function PostGallery({ images, post }: PostGalleryProps) {
   const [active, setActive] = useState(0);
+  const [viewing, setViewing] = useState(false);
   if (!images.length) return null;
 
   const current = images[active];
+  const alt = post?.title ?? 'Ảnh bài viết';
 
   return (
     <div className="post-gallery">
-      <div className="post-gallery-main">
+      <button type="button" className="post-gallery-main" onClick={() => setViewing(true)} aria-label="Xem ảnh toàn màn hình">
         <img src={current.url} alt="" />
-      </div>
+      </button>
       {images.length > 1 && (
         <div className="post-gallery-thumbs">
           {images.map((img, i) => (
@@ -33,6 +39,14 @@ export function PostGallery({ images }: PostGalleryProps) {
             </button>
           ))}
         </div>
+      )}
+      {viewing && (
+        <ImageViewer
+          images={images.map((img, i) => ({ url: img.url, alt: `${alt} – ảnh ${i + 1}` }))}
+          startIndex={active}
+          post={post}
+          onClose={() => setViewing(false)}
+        />
       )}
     </div>
   );
