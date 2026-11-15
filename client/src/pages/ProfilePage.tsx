@@ -4,6 +4,7 @@ import { usersApi } from '../api/users';
 import { parseError } from '../api/client';
 import FollowButton from '../components/FollowButton';
 import FollowListDialog from '../components/FollowListDialog';
+import ImageViewer from '../components/ImageViewer';
 import UserInitial from '../components/UserInitial';
 import { useAuth } from '../contexts/AuthContext';
 import type { Profile } from '../types';
@@ -15,12 +16,14 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [list, setList] = useState<'followers' | 'following' | null>(null);
+  const [viewAvatar, setViewAvatar] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setProfile(null);
     setError(null);
     setList(null);
+    setViewAvatar(false);
     usersApi
       .profile(username)
       .then((p) => !cancelled && setProfile(p))
@@ -41,7 +44,19 @@ export default function ProfilePage() {
   return (
     <>
       <section className="profile-header card">
-        <UserInitial user={profile} size={88} />
+        {/* (Mở rộng – A) Có ảnh đại diện thì bấm để xem toàn màn hình */}
+        {profile.avatar ? (
+          <button
+            type="button"
+            className="avatar-btn"
+            onClick={() => setViewAvatar(true)}
+            aria-label={`Xem ảnh đại diện của ${profile.displayName || profile.username}`}
+          >
+            <UserInitial user={profile} size={88} />
+          </button>
+        ) : (
+          <UserInitial user={profile} size={88} />
+        )}
         <div className="profile-info">
           <h1>
             {profile.displayName || profile.username}
@@ -76,6 +91,12 @@ export default function ProfilePage() {
           )}
         </div>
       </section>
+      {viewAvatar && profile.avatar && (
+        <ImageViewer
+          images={[{ url: profile.avatar.url, alt: `Ảnh đại diện của ${profile.displayName || profile.username}` }]}
+          onClose={() => setViewAvatar(false)}
+        />
+      )}
       {list && <FollowListDialog username={profile.username} kind={list} onClose={() => setList(null)} />}
     </>
   );
