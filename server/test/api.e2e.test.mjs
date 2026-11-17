@@ -66,6 +66,12 @@ const basePost = {
   visibility: 'public',
 };
 
+async function makePost(token, fields, files = [png, png]) {
+  const r = await api('POST', '/posts', { token, form: fileForm('images', files, fields) });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  return r.body;
+}
+
 describe('Tài khoản (F01)', () => {
   test('BR18: đăng ký luôn là member, role gửi kèm bị bỏ qua, không trả passwordHash', async () => {
     const r = await api('POST', '/auth/register', {
