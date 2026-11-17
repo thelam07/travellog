@@ -9,6 +9,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PostsModule } from './posts/posts.module';
 import { LikesModule } from './likes/likes.module';
 import { CommentsModule } from './comments/comments.module';
+import { ReportsModule } from './reports/reports.module';
 import { StorageModule } from './common/storage/storage.module';
 import { UsersModule } from './users/users.module';
 
@@ -38,6 +39,7 @@ class HealthController {
     PostsModule,
     LikesModule,
     CommentsModule,
+    ReportsModule,
     StorageModule,
   ],
   controllers: [HealthController],

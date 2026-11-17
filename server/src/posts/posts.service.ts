@@ -97,6 +97,11 @@ export class PostsService {
     return this.postModel.findOne({ _id: id, ...filter }).exec();
   }
 
+  async canView(id: string, viewer?: AuthUser): Promise<boolean> {
+    const post = await this.findOneForViewer(id, viewer);
+    return Boolean(post);
+  }
+
   // Tải bài theo id KHÔNG qua visibilityFilter — dùng cho OwnershipGuard cần biết author
   // kể cả khi bài hidden / authorLocked.
   async findByIdRaw(id: string): Promise<PostDocument | null> {
