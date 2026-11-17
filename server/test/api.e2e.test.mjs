@@ -887,42 +887,36 @@ describe('Danh sách + tìm kiếm bài (B10, mục 5.2)', () => {
     assert.equal(r4.body.error.code, 'INVALID_COST_RANGE');
   });
 
-  test('Phân trang con trỏ: trang 1 và 2 không lặp; tổng đúng số bài', async () => {
+  test('Phân trang con trỏ: trang 1 có 10 bài (hasMore=true), trang 2 có 2 bài (hasMore=false), tổng 12 id không trùng', async () => {
     const u = await register('spage');
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 1; i <= 12; i++) {
       await makePost(u.token, { ...basePost, title: `B10 page ${i}` });
       await sleep(20);
     }
 
     const author = `&author=${u.user.username}`;
-    const p1 = await api('GET', `/posts?limit=3${author}`);
+    // /api/posts cố định 10 bài/trang (mục 5.2), không có limit.
+    const p1 = await api('GET', `/posts${author}`);
     assert.equal(p1.status, 200);
-    assert.equal(p1.body.items.length, 3);
+    assert.equal(p1.body.items.length, 10);
     assert.equal(p1.body.hasMore, true);
     assert.ok(p1.body.nextCursor);
     const p1Ids = p1.body.items.map((i) => i._id);
 
-    const p2 = await api('GET', `/posts?limit=3&cursor=${p1.body.nextCursor}${author}`);
+    const p2 = await api('GET', `/posts?cursor=${p1.body.nextCursor}${author}`);
     assert.equal(p2.status, 200);
-    assert.equal(p2.body.items.length, 3);
-    assert.equal(p2.body.hasMore, true);
-    assert.ok(p2.body.nextCursor);
+    assert.equal(p2.body.items.length, 2);
+    assert.equal(p2.body.hasMore, false);
+    assert.equal(p2.body.nextCursor, null);
     const p2Ids = p2.body.items.map((i) => i._id);
 
     for (const id of p1Ids) {
       assert.equal(p2Ids.includes(id), false, `Trang 2 lặp bài ${id} của trang 1`);
     }
 
-    const p3 = await api('GET', `/posts?limit=3&cursor=${p2.body.nextCursor}${author}`);
-    assert.equal(p3.status, 200);
-    assert.equal(p3.body.items.length, 1);
-    assert.equal(p3.body.hasMore, false);
-    assert.equal(p3.body.nextCursor, null);
-    const p3Ids = p3.body.items.map((i) => i._id);
-
-    const allIds = [...p1Ids, ...p2Ids, ...p3Ids];
-    assert.equal(allIds.length, 7);
-    assert.equal(new Set(allIds).size, 7, 'Có bài lặp giữa các trang');
+    const allIds = [...p1Ids, ...p2Ids];
+    assert.equal(allIds.length, 12);
+    assert.equal(new Set(allIds).size, 12, 'Có bài lặp giữa các trang');
   });
 
   test('author không tồn tại → trả danh sách rỗng (không 404)', async () => {
