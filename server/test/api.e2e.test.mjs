@@ -1000,3 +1000,84 @@ describe('Báo cáo bài viết (C10 - F12, BR14)', () => {
     assert.equal(adminRes.body.error.code, 'FORBIDDEN_ROLE');
   });
 });
+
+describe('Admin xử lý báo cáo (C11 - F13, BR10, BR21)', () => {
+  const samplePost = {
+    title: 'Bài viết kiểm duyệt',
+    content: 'Nội dung bài viết để admin kiểm tra xử lý báo cáo và ẩn bài',
+    tripDate: '2026-10-02',
+    cost: 300000,
+    visibility: 'public',
+    location: JSON.stringify({ name: 'Đà Nẵng' }),
+  };
+
+  test('Thành viên gọi GET /reports, PATCH /reports/:id, PATCH /admin/posts/:id -> 403', async () => {
+    const member = await register('repnonadmin');
+
+    const getList = await api('GET', '/reports', { token: member.token });
+    assert.equal(getList.status, 403);
+
+    const patchRep = await api('PATCH', '/reports/654321654321654321654321', {
+      token: member.token,
+      json: { status: 'resolved' },
+    });
+    assert.equal(patchRep.status, 403);
+
+    const patchPost = await api('PATCH', '/admin/posts/654321654321654321654321', {
+      token: member.token,
+      json: { status: 'hidden' },
+    });
+    assert.equal(patchPost.status, 403);
+  });
+
+  test('Admin xử lý gộp: bài có 2 báo cáo chờ, ẩn 1 cái thì cả 2 chuyển resolved và bài ẩn (BR21, BR10)', async () => {
+    const author = await register('c11author1');
+    const u1 = await register('c11u1');
+    const u2 = await register('c11u2');
+    const post = await makePost(author.token, samplePost);
+
+    const rep1 = await api('POST', '/reports', {
+      token: u1.token,
+      json: { postId: post._id, reason: 'spam', note: 'Spam 1' },
+    });
+    const rep2 = await api('POST', '/reports', {
+      token: u2.token,
+      json: { postId: post._id, reason: 'offensive', note: 'Phản cảm 2' },
+    });
+    assert.equal(rep1.status, 201);
+    assert.equal(rep2.status, 201);
+
+    const listBefore = await api('GET', '/reports?status=pending', { token: admin });
+    assert.equal(listBefore.status, 200);
+    assert.ok(listBefore.body.items.length >= 2);
+
+    const handleRes = await api('PATCH', `/reports/${rep1.body._id}`, {
+      token: admin,
+      json: { status: 'resolved', hidePost: true },
+    });
+    assert.equal(handleRes.status, 200);
+    assert.ok(handleRes.body.updated >= 2);
+
+    const checkRep1 = await api('GET', '/reports?status=resolved', { token: admin });
+    const resolvedItems = checkRep1.body.items.filter((r) => r.post?._id === post._id);
+    assert.equal(resolvedItems.length, 2);
+    assert.ok(resolvedItems.every((r) => r.status === 'resolved'));
+
+    const guestGet = await api('GET', `/posts/${post._id}`);
+    assert.equal(guestGet.status, 404);
+
+    const authorGet = await api('GET', `/posts/${post._id}`, { token: author.token });
+    assert.equal(authorGet.status, 200);
+    assert.equal(authorGet.body.status, 'hidden');
+
+    const unhideRes = await api('PATCH', `/admin/posts/${post._id}`, {
+      token: admin,
+      json: { status: 'active' },
+    });
+    assert.equal(unhideRes.status, 200);
+    assert.equal(unhideRes.body.status, 'active');
+
+    const guestGetAfter = await api('GET', `/posts/${post._id}`);
+    assert.equal(guestGetAfter.status, 200);
+  });
+});

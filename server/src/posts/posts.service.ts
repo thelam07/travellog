@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, Types, isValidObjectId } from 'mongoose';
 import { AuthUser } from '../common/auth-user';
 import { clampLimit, CURSOR_SORT, cursorFilter, toCursorPage } from '../common/utils/cursor';
 import { FollowsService } from '../follows/follows.service';
@@ -248,6 +248,30 @@ export class PostsService {
       nextCursor: page.nextCursor,
       hasMore: page.hasMore,
     };
+  }
+
+  async updateStatus(id: string, status: 'active' | 'hidden', viewer: AuthUser) {
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException({
+        code: 'NOT_FOUND',
+        message: 'Không tìm thấy bài viết',
+      });
+    }
+    const post = await this.postModel.findById(id);
+    if (!post) {
+      throw new NotFoundException({
+        code: 'NOT_FOUND',
+        message: 'Không tìm thấy bài viết',
+      });
+    }
+    post.status = status;
+    await post.save();
+    return this.toClient(post, viewer);
+  }
+
+  async setPostHidden(id: string) {
+    if (!isValidObjectId(id)) return;
+    await this.postModel.updateOne({ _id: id }, { $set: { status: 'hidden' } });
   }
 
   // Parse chuỗi JSON keepImageIds thành Set<string>. Trả null nếu không gửi (nghĩa là giữ tất cả).
