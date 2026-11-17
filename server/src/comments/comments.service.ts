@@ -35,7 +35,7 @@ export class CommentsService {
       parent: null,
     };
     if (viewer?.role !== 'admin') {
-      rootFilter.authorLocked = false;
+      rootFilter.authorLocked = { $ne: true };
     }
 
     const cur = cursorFilter(cursor);
@@ -60,7 +60,7 @@ export class CommentsService {
       parent: { $in: rootIds },
     };
     if (viewer?.role !== 'admin') {
-      repliesFilter.authorLocked = false;
+      repliesFilter.authorLocked = { $ne: true };
     }
 
     const replyDocs = await this.commentModel
@@ -165,6 +165,7 @@ export class CommentsService {
   }
 
   async setAuthorLocked(userId: string, locked: boolean) {
+    if (!isValidObjectId(userId)) return;
     await this.commentModel.updateMany(
       { author: new Types.ObjectId(userId) },
       { $set: { authorLocked: locked } },

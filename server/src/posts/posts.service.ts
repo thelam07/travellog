@@ -274,6 +274,14 @@ export class PostsService {
     await this.postModel.updateOne({ _id: id }, { $set: { status: 'hidden' } });
   }
 
+  async setAuthorLocked(userId: string, locked: boolean) {
+    if (!isValidObjectId(userId)) return;
+    await this.postModel.updateMany(
+      { author: new Types.ObjectId(userId) },
+      { $set: { authorLocked: locked } },
+    );
+  }
+
   // Parse chuỗi JSON keepImageIds thành Set<string>. Trả null nếu không gửi (nghĩa là giữ tất cả).
   // Ném 400 nếu chuỗi không phải JSON hợp lệ hoặc chứa _id không thuộc bài.
   private parseKeepImageIds(raw: string | undefined, currentImages: PostImage[]): Set<string> | null {
