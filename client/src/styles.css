@@ -154,7 +154,7 @@ input[aria-invalid='true'], textarea[aria-invalid='true'] { border-color: var(--
 .alert-error { background: var(--danger-soft); color: var(--danger); }
 .page-loading { padding: 48px 0; text-align: center; color: var(--text-muted); }
 .alert-success { background: var(--success-soft); color: var(--success); }
-.narrow { max-width: 480px; }
+.narrow { max-width: 680px; margin: 0 auto; } /* giống bản mẫu: căn giữa trong khung 1100px */
 .admin-account { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; font-size: 0.92rem; }
 .admin-account .btn { justify-content: flex-start; padding-left: 0; }
 
