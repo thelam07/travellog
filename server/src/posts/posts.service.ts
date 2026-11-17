@@ -1,8 +1,9 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, Types, isValidObjectId } from 'mongoose';
 import { AuthUser } from '../common/auth-user';
 import { clampLimit, CURSOR_SORT, cursorFilter, toCursorPage } from '../common/utils/cursor';
+import { escapeRegex, normalizeKey } from '../common/utils/text';
 import { FollowsService } from '../follows/follows.service';
 import { Like } from '../likes/schemas/like.schema';
 import { Comment } from '../comments/schemas/comment.schema';
@@ -10,7 +11,8 @@ import { Notification } from '../notifications/schemas/notification.schema';
 import { Report } from '../reports/schemas/report.schema';
 import { StorageService } from '../common/storage/storage.service';
 import { toUserSummary } from '../users/user.mapper';
-import { CreatePostDto, UpdatePostDto } from './dto/post.dto';
+import { User } from '../users/schemas/user.schema';
+import { CreatePostDto, QueryPostDto, UpdatePostDto } from './dto/post.dto';
 import { Post, PostDocument, PostImage } from './schemas/post.schema';
 
 const MAX_IMAGES = 6;
@@ -25,6 +27,7 @@ export class PostsService {
     @InjectModel(Comment.name) private readonly commentModel: Model<Comment>,
     @InjectModel(Notification.name) private readonly notificationModel: Model<Notification>,
     @InjectModel(Report.name) private readonly reportModel: Model<Report>,
+    @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly storage: StorageService,
     private readonly follows: FollowsService,
   ) {}
@@ -95,6 +98,11 @@ export class PostsService {
     }
     const filter = await this.visibilityFilter(viewer);
     return this.postModel.findOne({ _id: id, ...filter }).exec();
+  }
+
+  async canView(id: string, viewer?: AuthUser): Promise<boolean> {
+    const post = await this.findOneForViewer(id, viewer);
+    return Boolean(post);
   }
 
   // Tải bài theo id KHÔNG qua visibilityFilter — dùng cho OwnershipGuard cần biết author
@@ -243,6 +251,117 @@ export class PostsService {
       nextCursor: page.nextCursor,
       hasMore: page.hasMore,
     };
+  }
+
+
+  // B10: GET /api/posts — danh sách + tìm kiếm (mục 5.2).
+  // - q bắt đầu bằng "#" → tìm theo hashtag; ngược lại so trên location.nameKey bằng $regex
+  //   của escapeRegex(normalizeKey(q)) để "Hội An" và "hoi an" ra cùng kết quả, gõ "a(b" không lỗi.
+  // - tag: so hashtags với chữ thường, bỏ dấu # nếu có. Có cả q và tag thì $or.
+  // - author: tìm user theo username; không có thì trả danh sách rỗng.
+  // - minCost > maxCost → 400.
+  // - Luôn kết hợp ($and) với visibilityFilter(viewer) của B6.
+  // - Phân trang con trỏ 10 bài mỗi lần, sort { createdAt: -1, _id: -1 }.
+  async findMany(query: QueryPostDto, viewer?: AuthUser) {
+    if (query.minCost !== undefined && query.maxCost !== undefined && query.minCost > query.maxCost) {
+      throw new BadRequestException({
+        code: 'INVALID_COST_RANGE',
+        message: 'minCost không được lớn hơn maxCost',
+      });
+    }
+
+    const andConditions: Record<string, unknown>[] = [];
+
+    // 1. visibilityFilter (B6) — luôn áp dụng.
+    andConditions.push(await this.visibilityFilter(viewer));
+
+    // 2. author: tìm user theo username; không có thì trả rỗng.
+    if (query.author) {
+      const author = await this.userModel
+        .findOne({ username: query.author.toLowerCase() })
+        .select('_id')
+        .lean();
+      if (!author) {
+        return { items: [], nextCursor: null, hasMore: false };
+      }
+      andConditions.push({ author: author._id });
+    }
+
+    // 3. cost range.
+    if (query.minCost !== undefined || query.maxCost !== undefined) {
+      const costFilter: Record<string, number> = {};
+      if (query.minCost !== undefined) costFilter.$gte = query.minCost;
+      if (query.maxCost !== undefined) costFilter.$lte = query.maxCost;
+      andConditions.push({ cost: costFilter });
+    }
+
+    // 4. q + tag: q bắt đầu bằng "#" → hashtag; ngược lại → location.nameKey.
+    //    Có cả q và tag thì $or (bất kì cái nào trúng).
+    const q = query.q?.trim();
+    const tag = query.tag?.trim().replace(/^#/, '');
+    const tagKey = tag ? normalizeKey(tag) : null;
+
+    if (q || tagKey) {
+      const ors: Record<string, unknown>[] = [];
+      if (q) {
+        if (q.startsWith('#')) {
+          // q dạng hashtag: bỏ # rồi so với hashtags (chữ thường, bỏ dấu).
+          const qKey = normalizeKey(q.slice(1));
+          if (qKey) ors.push({ hashtags: qKey });
+        } else {
+          // q thường: so trên location.nameKey bằng regex (escape + normalize).
+          const key = normalizeKey(q);
+          if (key) ors.push({ 'location.nameKey': { $regex: escapeRegex(key), $options: 'i' } });
+        }
+      }
+      if (tagKey) ors.push({ hashtags: tagKey });
+      andConditions.push({ $or: ors });
+    }
+
+    // 5. cursor.
+    const curFilter = cursorFilter(query.cursor);
+    if (Object.keys(curFilter).length > 0) {
+      andConditions.push(curFilter);
+    }
+
+    const limit = clampLimit(undefined, 10, 20);
+    const docs = await this.postModel
+      .find({ $and: andConditions })
+      .sort(CURSOR_SORT)
+      .limit(limit + 1)
+      .exec();
+
+    const page = toCursorPage(docs, limit);
+    const items = await Promise.all(page.items.map((post) => this.toClient(post, viewer)));
+    return {
+      items,
+      nextCursor: page.nextCursor,
+      hasMore: page.hasMore,
+    };
+  }
+
+  async updateStatus(id: string, status: 'active' | 'hidden', viewer: AuthUser) {
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException({
+        code: 'NOT_FOUND',
+        message: 'Không tìm thấy bài viết',
+      });
+    }
+    const post = await this.postModel.findById(id);
+    if (!post) {
+      throw new NotFoundException({
+        code: 'NOT_FOUND',
+        message: 'Không tìm thấy bài viết',
+      });
+    }
+    post.status = status;
+    await post.save();
+    return this.toClient(post, viewer);
+  }
+
+  async setPostHidden(id: string) {
+    if (!isValidObjectId(id)) return;
+    await this.postModel.updateOne({ _id: id }, { $set: { status: 'hidden' } });
   }
 
   // Parse chuỗi JSON keepImageIds thành Set<string>. Trả null nếu không gửi (nghĩa là giữ tất cả).

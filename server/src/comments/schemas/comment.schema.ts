@@ -26,3 +26,4 @@ export const CommentSchema = SchemaFactory.createForClass(Comment);
 
 // Index phục vụ lấy bình luận gốc và phân trang
 CommentSchema.index({ post: 1, parent: 1, createdAt: 1 });
+CommentSchema.index({ post: 1, parent: 1, createdAt: -1, _id: -1 });
