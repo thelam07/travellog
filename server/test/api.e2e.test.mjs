@@ -66,6 +66,12 @@ const basePost = {
   visibility: 'public',
 };
 
+async function makePost(token, fields, files = [png, png]) {
+  const r = await api('POST', '/posts', { token, form: fileForm('images', files, fields) });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  return r.body;
+}
+
 describe('Tài khoản (F01)', () => {
   test('BR18: đăng ký luôn là member, role gửi kèm bị bỏ qua, không trả passwordHash', async () => {
     const r = await api('POST', '/auth/register', {
@@ -771,6 +777,7 @@ describe('Sửa và xoá bài (B7, BR06/BR07/BR15)', () => {
   });
 });
 
+
 describe('Danh sách + tìm kiếm bài (B10, mục 5.2)', () => {
   async function makePost(token, fields, files = [png]) {
     const r = await api('POST', '/posts', { token, form: fileForm('images', files, fields) });
@@ -927,3 +934,316 @@ describe('Danh sách + tìm kiếm bài (B10, mục 5.2)', () => {
     assert.equal(r.body.nextCursor, null);
   });
 });
+
+describe('Bình luận bài viết (C8 - BR03, BR06, BR08, BR22)', () => {
+  const commPost = { ...basePost, title: 'Bài test bình luận C8' };
+
+  test('Tạo bình luận gốc: tăng commentCount; nội dung toàn khoảng trắng -> 400', async () => {
+    const author = await register('cmauthor1');
+    const member = await register('cmmember1');
+    const post = await makePost(author.token, commPost);
+
+    const blank = await api('POST', `/posts/${post._id}/comments`, { token: member.token, json: { content: '   ' } });
+    assert.equal(blank.status, 400);
+
+    const res = await api('POST', `/posts/${post._id}/comments`, { token: member.token, json: { content: 'Bình luận hay quá' } });
+    assert.equal(res.status, 201);
+    assert.equal(res.body.content, 'Bình luận hay quá');
+    assert.equal(res.body.parent, null);
+    assert.equal(res.body.author.username, member.user.username);
+
+    const getPost = await api('GET', `/posts/${post._id}`, { token: author.token });
+    assert.equal(getPost.body.commentCount, 1);
+  });
+
+  test('BR03: trả lời một trả lời thì parent là bình luận gốc', async () => {
+    const author = await register('cmauthor2');
+    const u1 = await register('cmu1');
+    const u2 = await register('cmu2');
+    const post = await makePost(author.token, commPost);
+
+    const root = await api('POST', `/posts/${post._id}/comments`, { token: u1.token, json: { content: 'Gốc' } });
+    assert.equal(root.status, 201);
+    assert.equal(root.body.parent, null);
+
+    const reply1 = await api('POST', `/posts/${post._id}/comments`, {
+      token: u2.token,
+      json: { content: 'Trả lời cấp 1', parentId: root.body._id },
+    });
+    assert.equal(reply1.status, 201);
+    assert.equal(reply1.body.parent, root.body._id);
+
+    const reply2 = await api('POST', `/posts/${post._id}/comments`, {
+      token: u1.token,
+      json: { content: 'Trả lời cấp 2', parentId: reply1.body._id },
+    });
+    assert.equal(reply2.status, 201);
+    assert.equal(reply2.body.parent, root.body._id);
+
+    const list = await api('GET', `/posts/${post._id}/comments`);
+    assert.equal(list.status, 200);
+    assert.equal(list.body.items.length, 1);
+    assert.equal(list.body.items[0]._id, root.body._id);
+    assert.equal(list.body.items[0].replies.length, 2);
+    assert.equal(list.body.items[0].replies[0]._id, reply1.body._id);
+    assert.equal(list.body.items[0].replies[1]._id, reply2.body._id);
+  });
+
+  test('BR22: xoá gốc có 2 trả lời -> { deleted: 3 } và commentCount giảm 3', async () => {
+    const author = await register('cmauthor3');
+    const u = await register('cmu3');
+    const post = await makePost(author.token, commPost);
+
+    const root = await api('POST', `/posts/${post._id}/comments`, { token: u.token, json: { content: 'Gốc sẽ xoá' } });
+    await api('POST', `/posts/${post._id}/comments`, { token: u.token, json: { content: 'Con 1', parentId: root.body._id } });
+    await api('POST', `/posts/${post._id}/comments`, { token: u.token, json: { content: 'Con 2', parentId: root.body._id } });
+
+    const beforePost = await api('GET', `/posts/${post._id}`, { token: author.token });
+    assert.equal(beforePost.body.commentCount, 3);
+
+    const del = await api('DELETE', `/comments/${root.body._id}`, { token: u.token });
+    assert.equal(del.status, 200);
+    assert.equal(del.body.deleted, 3);
+
+    const afterPost = await api('GET', `/posts/${post._id}`, { token: author.token });
+    assert.equal(afterPost.body.commentCount, 0);
+
+    const list = await api('GET', `/posts/${post._id}/comments`);
+    assert.equal(list.body.items.length, 0);
+  });
+
+  test('BR06: người lạ xoá -> 403; chủ bài và admin xoá được -> 200', async () => {
+    const postAuthor = await register('cmpauthor');
+    const commAuthor = await register('cmcauthor');
+    const stranger = await register('cmstranger');
+    const post = await makePost(postAuthor.token, commPost);
+
+    const comm = await api('POST', `/posts/${post._id}/comments`, { token: commAuthor.token, json: { content: 'Bình luận test quyền' } });
+
+    const forbid = await api('DELETE', `/comments/${comm.body._id}`, { token: stranger.token });
+    assert.equal(forbid.status, 403);
+
+    const comm2 = await api('POST', `/posts/${post._id}/comments`, { token: commAuthor.token, json: { content: 'Chủ bài xoá' } });
+    const postOwnerDel = await api('DELETE', `/comments/${comm2.body._id}`, { token: postAuthor.token });
+    assert.equal(postOwnerDel.status, 200);
+    assert.equal(postOwnerDel.body.deleted, 1);
+
+    const comm3 = await api('POST', `/posts/${post._id}/comments`, { token: commAuthor.token, json: { content: 'Admin xoá' } });
+    const adminDel = await api('DELETE', `/comments/${comm3.body._id}`, { token: admin });
+    assert.equal(adminDel.status, 200);
+    assert.equal(adminDel.body.deleted, 1);
+  });
+
+  test('BR20: admin không được tạo bình luận -> 403 FORBIDDEN_ROLE', async () => {
+    const author = await register('cmauthor4');
+    const post = await makePost(author.token, commPost);
+
+    const res = await api('POST', `/posts/${post._id}/comments`, { token: admin, json: { content: 'Admin thử comment' } });
+    assert.equal(res.status, 403);
+    assert.equal(res.body.error.code, 'FORBIDDEN_ROLE');
+  });
+
+  test('parentId của bài viết khác -> 404', async () => {
+    const author = await register('cmauthor5');
+    const user = await register('cmu5');
+    const post1 = await makePost(author.token, { ...commPost, title: 'Bài 1' });
+    const post2 = await makePost(author.token, { ...commPost, title: 'Bài 2' });
+
+    const c1 = await api('POST', `/posts/${post1._id}/comments`, { token: user.token, json: { content: 'Bài 1' } });
+
+    const mismatch = await api('POST', `/posts/${post2._id}/comments`, {
+      token: user.token,
+      json: { content: 'Lạc cha', parentId: c1.body._id },
+    });
+    assert.equal(mismatch.status, 404);
+  });
+});
+
+describe('Báo cáo bài viết (C10 - F12, BR14)', () => {
+  const samplePost = {
+    title: 'Bài viết cần báo cáo',
+    content: 'Nội dung bài viết mẫu để thử báo cáo vi phạm',
+    tripDate: '2026-10-01',
+    cost: 500000,
+    visibility: 'public',
+    location: JSON.stringify({ name: 'Hà Nội' }),
+  };
+
+  test('Báo cáo lần đầu thành công -> 201, populate đúng', async () => {
+    const author = await register('repauthor1');
+    const reporter = await register('reporter1');
+    const post = await makePost(author.token, samplePost);
+
+    const res = await api('POST', '/reports', {
+      token: reporter.token,
+      json: {
+        postId: post._id,
+        reason: 'spam',
+        note: 'Bài viết spam quảng cáo',
+      },
+    });
+
+    assert.equal(res.status, 201);
+    assert.equal(res.body.reason, 'spam');
+    assert.equal(res.body.note, 'Bài viết spam quảng cáo');
+    assert.equal(res.body.status, 'pending');
+    assert.equal(res.body.handledBy, null);
+    assert.equal(res.body.post._id, post._id);
+    assert.equal(res.body.reporter._id, reporter.user._id);
+  });
+
+  test('Báo cáo trùng cùng post và reporter -> 409 ALREADY_REPORTED', async () => {
+    const author = await register('repauthor2');
+    const reporter = await register('reporter2');
+    const post = await makePost(author.token, samplePost);
+
+    const first = await api('POST', '/reports', {
+      token: reporter.token,
+      json: { postId: post._id, reason: 'offensive' },
+    });
+    assert.equal(first.status, 201);
+
+    const second = await api('POST', '/reports', {
+      token: reporter.token,
+      json: { postId: post._id, reason: 'other', note: 'Thử lại' },
+    });
+    assert.equal(second.status, 409);
+    assert.equal(second.body.error.code, 'ALREADY_REPORTED');
+  });
+
+  test('Lý do sai hoặc note quá dài -> 400', async () => {
+    const author = await register('repauthor3');
+    const reporter = await register('reporter3');
+    const post = await makePost(author.token, samplePost);
+
+    const badReason = await api('POST', '/reports', {
+      token: reporter.token,
+      json: { postId: post._id, reason: 'invalid_reason' },
+    });
+    assert.equal(badReason.status, 400);
+
+    const tooLongNote = await api('POST', '/reports', {
+      token: reporter.token,
+      json: { postId: post._id, reason: 'spam', note: 'a'.repeat(501) },
+    });
+    assert.equal(tooLongNote.status, 400);
+  });
+
+  test('Bài không tồn tại hoặc không xem được -> 404', async () => {
+    const author = await register('repauthor4');
+    const stranger = await register('repstranger4');
+    const followersPost = await makePost(author.token, { ...samplePost, visibility: 'followers' });
+
+    const notFound = await api('POST', '/reports', {
+      token: stranger.token,
+      json: { postId: '654321654321654321654321', reason: 'spam' },
+    });
+    assert.equal(notFound.status, 404);
+
+    const cannotView = await api('POST', '/reports', {
+      token: stranger.token,
+      json: { postId: followersPost._id, reason: 'spam' },
+    });
+    assert.equal(cannotView.status, 404);
+  });
+
+  test('Khách -> 401, Admin -> 403', async () => {
+    const author = await register('repauthor5');
+    const post = await makePost(author.token, samplePost);
+
+    const guest = await api('POST', '/reports', {
+      json: { postId: post._id, reason: 'spam' },
+    });
+    assert.equal(guest.status, 401);
+
+    const adminRes = await api('POST', '/reports', {
+      token: admin,
+      json: { postId: post._id, reason: 'spam' },
+    });
+    assert.equal(adminRes.status, 403);
+    assert.equal(adminRes.body.error.code, 'FORBIDDEN_ROLE');
+  });
+});
+
+describe('Admin xử lý báo cáo (C11 - F13, BR10, BR21)', () => {
+  const samplePost = {
+    title: 'Bài viết kiểm duyệt',
+    content: 'Nội dung bài viết để admin kiểm tra xử lý báo cáo và ẩn bài',
+    tripDate: '2026-10-02',
+    cost: 300000,
+    visibility: 'public',
+    location: JSON.stringify({ name: 'Đà Nẵng' }),
+  };
+
+  test('Thành viên gọi GET /reports, PATCH /reports/:id, PATCH /admin/posts/:id -> 403', async () => {
+    const member = await register('repnonadmin');
+
+    const getList = await api('GET', '/reports', { token: member.token });
+    assert.equal(getList.status, 403);
+
+    const patchRep = await api('PATCH', '/reports/654321654321654321654321', {
+      token: member.token,
+      json: { status: 'resolved' },
+    });
+    assert.equal(patchRep.status, 403);
+
+    const patchPost = await api('PATCH', '/admin/posts/654321654321654321654321', {
+      token: member.token,
+      json: { status: 'hidden' },
+    });
+    assert.equal(patchPost.status, 403);
+  });
+
+  test('Admin xử lý gộp: bài có 2 báo cáo chờ, ẩn 1 cái thì cả 2 chuyển resolved và bài ẩn (BR21, BR10)', async () => {
+    const author = await register('c11author1');
+    const u1 = await register('c11u1');
+    const u2 = await register('c11u2');
+    const post = await makePost(author.token, samplePost);
+
+    const rep1 = await api('POST', '/reports', {
+      token: u1.token,
+      json: { postId: post._id, reason: 'spam', note: 'Spam 1' },
+    });
+    const rep2 = await api('POST', '/reports', {
+      token: u2.token,
+      json: { postId: post._id, reason: 'offensive', note: 'Phản cảm 2' },
+    });
+    assert.equal(rep1.status, 201);
+    assert.equal(rep2.status, 201);
+
+    const listBefore = await api('GET', '/reports?status=pending', { token: admin });
+    assert.equal(listBefore.status, 200);
+    assert.ok(listBefore.body.items.length >= 2);
+
+    const handleRes = await api('PATCH', `/reports/${rep1.body._id}`, {
+      token: admin,
+      json: { status: 'resolved', hidePost: true },
+    });
+    assert.equal(handleRes.status, 200);
+    assert.ok(handleRes.body.updated >= 2);
+
+    const checkRep1 = await api('GET', '/reports?status=resolved', { token: admin });
+    const resolvedItems = checkRep1.body.items.filter((r) => r.post?._id === post._id);
+    assert.equal(resolvedItems.length, 2);
+    assert.ok(resolvedItems.every((r) => r.status === 'resolved'));
+
+    const guestGet = await api('GET', `/posts/${post._id}`);
+    assert.equal(guestGet.status, 404);
+
+    const authorGet = await api('GET', `/posts/${post._id}`, { token: author.token });
+    assert.equal(authorGet.status, 200);
+    assert.equal(authorGet.body.status, 'hidden');
+
+    const unhideRes = await api('PATCH', `/admin/posts/${post._id}`, {
+      token: admin,
+      json: { status: 'active' },
+    });
+    assert.equal(unhideRes.status, 200);
+    assert.equal(unhideRes.body.status, 'active');
+
+    const guestGetAfter = await api('GET', `/posts/${post._id}`);
+    assert.equal(guestGetAfter.status, 200);
+
+  });
+});
+

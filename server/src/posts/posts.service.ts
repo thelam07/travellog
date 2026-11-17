@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, Types, isValidObjectId } from 'mongoose';
 import { AuthUser } from '../common/auth-user';
 import { clampLimit, CURSOR_SORT, cursorFilter, toCursorPage } from '../common/utils/cursor';
 import { escapeRegex, normalizeKey } from '../common/utils/text';
@@ -98,6 +98,11 @@ export class PostsService {
     }
     const filter = await this.visibilityFilter(viewer);
     return this.postModel.findOne({ _id: id, ...filter }).exec();
+  }
+
+  async canView(id: string, viewer?: AuthUser): Promise<boolean> {
+    const post = await this.findOneForViewer(id, viewer);
+    return Boolean(post);
   }
 
   // Tải bài theo id KHÔNG qua visibilityFilter — dùng cho OwnershipGuard cần biết author
@@ -248,6 +253,7 @@ export class PostsService {
     };
   }
 
+
   // B10: GET /api/posts — danh sách + tìm kiếm (mục 5.2).
   // - q bắt đầu bằng "#" → tìm theo hashtag; ngược lại so trên location.nameKey bằng $regex
   //   của escapeRegex(normalizeKey(q)) để "Hội An" và "hoi an" ra cùng kết quả, gõ "a(b" không lỗi.
@@ -332,6 +338,30 @@ export class PostsService {
       nextCursor: page.nextCursor,
       hasMore: page.hasMore,
     };
+  }
+
+  async updateStatus(id: string, status: 'active' | 'hidden', viewer: AuthUser) {
+    if (!isValidObjectId(id)) {
+      throw new NotFoundException({
+        code: 'NOT_FOUND',
+        message: 'Không tìm thấy bài viết',
+      });
+    }
+    const post = await this.postModel.findById(id);
+    if (!post) {
+      throw new NotFoundException({
+        code: 'NOT_FOUND',
+        message: 'Không tìm thấy bài viết',
+      });
+    }
+    post.status = status;
+    await post.save();
+    return this.toClient(post, viewer);
+  }
+
+  async setPostHidden(id: string) {
+    if (!isValidObjectId(id)) return;
+    await this.postModel.updateOne({ _id: id }, { $set: { status: 'hidden' } });
   }
 
   // Parse chuỗi JSON keepImageIds thành Set<string>. Trả null nếu không gửi (nghĩa là giữ tất cả).
