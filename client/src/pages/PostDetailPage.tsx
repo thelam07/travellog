@@ -3,7 +3,7 @@
 // Hiện tác giả, thời gian, tiêu đề, nội dung, hashtag, ảnh (PostGallery), thông tin (PostMeta).
 // Chủ bài thấy nút Sửa / Xoá. Bài 'hidden' hiện dải thông báo cho tác giả.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { parseError } from '../api/client';
 import { postsApi } from '../api/posts';
@@ -15,6 +15,7 @@ import { LikeButton } from '../components/LikeButton';
 import { PageSpinner } from '../components/Spinner';
 import { PostGallery } from '../components/PostGallery';
 import { PostMeta } from '../components/PostMeta';
+import { CommentList } from '../components/comments/CommentList';
 import { useAuth } from '../contexts/AuthContext';
 import { useFetch } from '../hooks/useFetch';
 import { timeAgo } from '../utils/format';
@@ -30,6 +31,13 @@ export default function PostDetailPage() {
 
   const url = id ? `/posts/${id}` : null;
   const { data: post, loading, error } = useFetch<Post>(url);
+  const [commentCount, setCommentCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (post) {
+      setCommentCount(post.commentCount);
+    }
+  }, [post?._id, post?.commentCount]);
 
   if (loading) return <PageSpinner />;
 
@@ -130,16 +138,23 @@ export default function PostDetailPage() {
           </div>
         )}
 
-        {/* Hành động: LikeButton (C làm), bình luận (C), báo cáo (C) */}
         <div className="post-detail-actions-row">
           <LikeButton
             postId={post._id}
             initialLiked={post.likedByMe}
             initialCount={post.likeCount}
           />
-          {/* TODO(C): danh sách bình luận + form bình luận */}
-          {/* TODO(C): nút Báo cáo bài viết */}
+          <span className="post-detail-comments-count">💬 {commentCount}</span>
         </div>
+
+        <section className="post-comments-section">
+          <h2 className="post-comments-heading">Bình luận ({commentCount})</h2>
+          <CommentList
+            postId={post._id}
+            postAuthorId={post.author._id}
+            onCommentCountChange={(delta) => setCommentCount((c) => Math.max(0, c + delta))}
+          />
+        </section>
 
         {deleteError && <div className="alert alert-error">{deleteError}</div>}
       </article>
