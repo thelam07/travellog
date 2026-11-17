@@ -66,6 +66,12 @@ const basePost = {
   visibility: 'public',
 };
 
+async function makePost(token, fields, files = [png, png]) {
+  const r = await api('POST', '/posts', { token, form: fileForm('images', files, fields) });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  return r.body;
+}
+
 describe('Tài khoản (F01)', () => {
   test('BR18: đăng ký luôn là member, role gửi kèm bị bỏ qua, không trả passwordHash', async () => {
     const r = await api('POST', '/auth/register', {
@@ -925,7 +931,7 @@ describe('Báo cáo bài viết (C10 - F12, BR14)', () => {
     assert.equal(res.body.status, 'pending');
     assert.equal(res.body.handledBy, null);
     assert.equal(res.body.post._id, post._id);
-    assert.equal(res.body.reporter._id, reporter.id);
+    assert.equal(res.body.reporter._id, reporter.user._id);
   });
 
   test('Báo cáo trùng cùng post và reporter -> 409 ALREADY_REPORTED', async () => {
