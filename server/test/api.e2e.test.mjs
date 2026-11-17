@@ -896,7 +896,7 @@ describe('Danh sách + tìm kiếm bài (B10, mục 5.2)', () => {
 
     const author = `&author=${u.user.username}`;
     // /api/posts cố định 10 bài/trang (mục 5.2), không có limit.
-    const p1 = await api('GET', `/posts${author}`);
+    const p1 = await api('GET', `/posts?author=${u.user.username}`);
     assert.equal(p1.status, 200);
     assert.equal(p1.body.items.length, 10);
     assert.equal(p1.body.hasMore, true);
