@@ -816,42 +816,48 @@ describe('Danh sách + tìm kiếm bài (B10, mục 5.2)', () => {
 
   test('Tìm địa điểm: "Hội An" và "hoi an" ra cùng kết quả; kí tự đặc biệt không lỗi', async () => {
     const u = await register('ssearch');
-    await makePost(u.token, { ...basePost, title: 'B10 search Hoi An', location: { name: 'Hội An' } });
-    await makePost(u.token, { ...basePost, title: 'B10 search Da Lat', location: { name: 'Đà Lạt' } });
+    // Dùng uid trong location để tránh trùng với bài của test khác.
+    const loc = `Hội An ${uid}`;
+    await makePost(u.token, { ...basePost, title: 'B10 search Hoi An', location: { name: loc } });
+    await makePost(u.token, { ...basePost, title: 'B10 search Da Lat', location: { name: `Đà Lạt ${uid}` } });
 
-    const r1 = await api('GET', '/posts?q=Hội%20An');
+    const author = `&author=${u.user.username}`;
+    const r1 = await api('GET', `/posts?q=H%E1%BB%99i%20An%20${uid}${author}`);
     assert.equal(r1.status, 200);
     assert.equal(r1.body.items.length, 1);
     assert.equal(r1.body.items[0].title, 'B10 search Hoi An');
 
-    const r2 = await api('GET', '/posts?q=hoi%20an');
+    const r2 = await api('GET', `/posts?q=hoi%20an%20${uid}${author}`);
     assert.equal(r2.status, 200);
     assert.equal(r2.body.items.length, 1);
     assert.equal(r2.body.items[0].title, 'B10 search Hoi An');
 
     // Kí tự đặc biệt trong regex phải được escape, không ném lỗi
-    const r3 = await api('GET', '/posts?q=a(b');
+    const r3 = await api('GET', `/posts?q=a(b${author}`);
     assert.equal(r3.status, 200);
     assert.equal(r3.body.items.length, 0);
   });
 
   test('Tìm hashtag: q="#dalat" chỉ ra bài có hashtag dalat; tag="dalat" cũng ra', async () => {
     const u = await register('stag');
-    await makePost(u.token, { ...basePost, title: 'B10 tag DaLat', content: 'Đi #DaLat #phuot' });
+    // Dùng uid trong tag để tránh trùng với bài của test khác.
+    const tag = `dalat${uid}`;
+    await makePost(u.token, { ...basePost, title: 'B10 tag DaLat', content: `Đi #${tag} phuot` });
     await makePost(u.token, { ...basePost, title: 'B10 tag khong lien quan', content: 'Khong co tag gi' });
 
-    const r1 = await api('GET', '/posts?q=%23dalat');
+    const author = `&author=${u.user.username}`;
+    const r1 = await api('GET', `/posts?q=%23${tag}${author}`);
     assert.equal(r1.status, 200);
     assert.equal(r1.body.items.length, 1);
     assert.equal(r1.body.items[0].title, 'B10 tag DaLat');
 
-    const r2 = await api('GET', '/posts?tag=dalat');
+    const r2 = await api('GET', `/posts?tag=${tag}${author}`);
     assert.equal(r2.status, 200);
     assert.equal(r2.body.items.length, 1);
     assert.equal(r2.body.items[0].title, 'B10 tag DaLat');
 
     // tag có dấu # ở đầu cũng được
-    const r3 = await api('GET', '/posts?tag=%23dalat');
+    const r3 = await api('GET', `/posts?tag=%23${tag}${author}`);
     assert.equal(r3.status, 200);
     assert.equal(r3.body.items.length, 1);
   });
@@ -862,20 +868,21 @@ describe('Danh sách + tìm kiếm bài (B10, mục 5.2)', () => {
     await makePost(u.token, { ...basePost, title: 'B10 cost 1500', cost: 1500 });
     await makePost(u.token, { ...basePost, title: 'B10 cost 3000', cost: 3000 });
 
-    const r1 = await api('GET', '/posts?minCost=1000&maxCost=2000');
+    const author = `&author=${u.user.username}`;
+    const r1 = await api('GET', `/posts?minCost=1000&maxCost=2000${author}`);
     assert.equal(r1.status, 200);
     assert.equal(r1.body.items.length, 1);
     assert.equal(r1.body.items[0].title, 'B10 cost 1500');
 
-    const r2 = await api('GET', '/posts?minCost=1000');
+    const r2 = await api('GET', `/posts?minCost=1000${author}`);
     assert.equal(r2.status, 200);
     assert.equal(r2.body.items.length, 2);
 
-    const r3 = await api('GET', '/posts?maxCost=1000');
+    const r3 = await api('GET', `/posts?maxCost=1000${author}`);
     assert.equal(r3.status, 200);
     assert.equal(r3.body.items.length, 1);
 
-    const r4 = await api('GET', '/posts?minCost=2000&maxCost=1000');
+    const r4 = await api('GET', `/posts?minCost=2000&maxCost=1000${author}`);
     assert.equal(r4.status, 400);
     assert.equal(r4.body.error.code, 'INVALID_COST_RANGE');
   });
@@ -887,14 +894,15 @@ describe('Danh sách + tìm kiếm bài (B10, mục 5.2)', () => {
       await sleep(20);
     }
 
-    const p1 = await api('GET', '/posts?limit=3');
+    const author = `&author=${u.user.username}`;
+    const p1 = await api('GET', `/posts?limit=3${author}`);
     assert.equal(p1.status, 200);
     assert.equal(p1.body.items.length, 3);
     assert.equal(p1.body.hasMore, true);
     assert.ok(p1.body.nextCursor);
     const p1Ids = p1.body.items.map((i) => i._id);
 
-    const p2 = await api('GET', `/posts?limit=3&cursor=${p1.body.nextCursor}`);
+    const p2 = await api('GET', `/posts?limit=3&cursor=${p1.body.nextCursor}${author}`);
     assert.equal(p2.status, 200);
     assert.equal(p2.body.items.length, 3);
     assert.equal(p2.body.hasMore, true);
@@ -905,7 +913,7 @@ describe('Danh sách + tìm kiếm bài (B10, mục 5.2)', () => {
       assert.equal(p2Ids.includes(id), false, `Trang 2 lặp bài ${id} của trang 1`);
     }
 
-    const p3 = await api('GET', `/posts?limit=3&cursor=${p2.body.nextCursor}`);
+    const p3 = await api('GET', `/posts?limit=3&cursor=${p2.body.nextCursor}${author}`);
     assert.equal(p3.status, 200);
     assert.equal(p3.body.items.length, 1);
     assert.equal(p3.body.hasMore, false);
