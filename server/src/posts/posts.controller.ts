@@ -10,6 +10,7 @@ import {
   ParseFilePipe,
   Patch,
   Post,
+  Query,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
@@ -22,7 +23,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { ALLOW_ADMIN_KEY, OwnershipGuard } from '../common/guards/ownership.guard';
 import { AuthUser } from '../common/auth-user';
 import { AccessiblePost } from './decorators/accessible-post.decorator';
-import { CreatePostDto, UpdatePostDto } from './dto/post.dto';
+import { CreatePostDto, QueryPostDto, UpdatePostDto } from './dto/post.dto';
 import { PostAccessGuard } from './guards/post-access.guard';
 import { PostDocument } from './schemas/post.schema';
 import { PostsService } from './posts.service';
@@ -30,6 +31,14 @@ import { PostsService } from './posts.service';
 @Controller('posts')
 export class PostsController {
   constructor(private readonly posts: PostsService) {}
+
+  // B10: GET /api/posts — danh sách + tìm kiếm (mục 5.2). Khách cũng dùng được.
+  // OptionalJwtAuthGuard để visibilityFilter biết viewer là ai (admin thấy hết, member thấy bài mình + bài public/followers).
+  @Get()
+  @UseGuards(OptionalJwtAuthGuard)
+  async findMany(@Query() query: QueryPostDto, @CurrentUser() user?: AuthUser) {
+    return this.posts.findMany(query, user);
+  }
 
   // Đăng bài có ảnh (BR05). Admin không đăng bài (BR20).
   // FilesInterceptor đặt 7 để multer không ném "Too many files" tiếng Anh; service sẽ kiểm
