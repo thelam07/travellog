@@ -770,3 +770,158 @@ describe('Sửa và xoá bài (B7, BR06/BR07/BR15)', () => {
     assert.equal(get.status, 404);
   });
 });
+
+describe('Danh sách + tìm kiếm bài (B10, mục 5.2)', () => {
+  async function makePost(token, fields, files = [png]) {
+    const r = await api('POST', '/posts', { token, form: fileForm('images', files, fields) });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    return r.body;
+  }
+
+  test('Quyền xem: khách chỉ thấy public; người theo dõi thấy public + followers; chủ bài thấy cả bài followers của mình', async () => {
+    const author = await register('sauthor');
+    const follower = await register('sfollower');
+    const stranger = await register('sstranger');
+
+    // follower theo dõi author
+    const followRes = await api('POST', '/follows', { token: follower.token, json: { userId: author.user._id } });
+    assert.equal(followRes.status, 201);
+
+    // author đăng 2 public + 1 followers
+    await makePost(author.token, { ...basePost, title: 'B10 public 1', visibility: 'public' });
+    await makePost(author.token, { ...basePost, title: 'B10 public 2', visibility: 'public' });
+    await makePost(author.token, { ...basePost, title: 'B10 followers', visibility: 'followers' });
+
+    // Khách: chỉ thấy 2 public
+    const guest = await api('GET', '/posts?author=' + author.user.username);
+    assert.equal(guest.status, 200);
+    assert.equal(guest.body.items.length, 2);
+    for (const p of guest.body.items) assert.equal(p.visibility, 'public');
+
+    // Người lạ (đăng nhập nhưng không theo dõi): chỉ thấy 2 public
+    const strangerRes = await api('GET', '/posts?author=' + author.user.username, { token: stranger.token });
+    assert.equal(strangerRes.status, 200);
+    assert.equal(strangerRes.body.items.length, 2);
+
+    // Người theo dõi: thấy cả 3
+    const followerRes = await api('GET', '/posts?author=' + author.user.username, { token: follower.token });
+    assert.equal(followerRes.status, 200);
+    assert.equal(followerRes.body.items.length, 3);
+
+    // Chủ bài: thấy cả 3 (kể cả bài followers của chính mình)
+    const ownerRes = await api('GET', '/posts?author=' + author.user.username, { token: author.token });
+    assert.equal(ownerRes.status, 200);
+    assert.equal(ownerRes.body.items.length, 3);
+  });
+
+  test('Tìm địa điểm: "Hội An" và "hoi an" ra cùng kết quả; kí tự đặc biệt không lỗi', async () => {
+    const u = await register('ssearch');
+    await makePost(u.token, { ...basePost, title: 'B10 search Hoi An', location: { name: 'Hội An' } });
+    await makePost(u.token, { ...basePost, title: 'B10 search Da Lat', location: { name: 'Đà Lạt' } });
+
+    const r1 = await api('GET', '/posts?q=Hội%20An');
+    assert.equal(r1.status, 200);
+    assert.equal(r1.body.items.length, 1);
+    assert.equal(r1.body.items[0].title, 'B10 search Hoi An');
+
+    const r2 = await api('GET', '/posts?q=hoi%20an');
+    assert.equal(r2.status, 200);
+    assert.equal(r2.body.items.length, 1);
+    assert.equal(r2.body.items[0].title, 'B10 search Hoi An');
+
+    // Kí tự đặc biệt trong regex phải được escape, không ném lỗi
+    const r3 = await api('GET', '/posts?q=a(b');
+    assert.equal(r3.status, 200);
+    assert.equal(r3.body.items.length, 0);
+  });
+
+  test('Tìm hashtag: q="#dalat" chỉ ra bài có hashtag dalat; tag="dalat" cũng ra', async () => {
+    const u = await register('stag');
+    await makePost(u.token, { ...basePost, title: 'B10 tag DaLat', content: 'Đi #DaLat #phuot' });
+    await makePost(u.token, { ...basePost, title: 'B10 tag khong lien quan', content: 'Khong co tag gi' });
+
+    const r1 = await api('GET', '/posts?q=%23dalat');
+    assert.equal(r1.status, 200);
+    assert.equal(r1.body.items.length, 1);
+    assert.equal(r1.body.items[0].title, 'B10 tag DaLat');
+
+    const r2 = await api('GET', '/posts?tag=dalat');
+    assert.equal(r2.status, 200);
+    assert.equal(r2.body.items.length, 1);
+    assert.equal(r2.body.items[0].title, 'B10 tag DaLat');
+
+    // tag có dấu # ở đầu cũng được
+    const r3 = await api('GET', '/posts?tag=%23dalat');
+    assert.equal(r3.status, 200);
+    assert.equal(r3.body.items.length, 1);
+  });
+
+  test('Lọc chi phí: minCost / maxCost; minCost > maxCost → 400 INVALID_COST_RANGE', async () => {
+    const u = await register('scost');
+    await makePost(u.token, { ...basePost, title: 'B10 cost 500', cost: 500 });
+    await makePost(u.token, { ...basePost, title: 'B10 cost 1500', cost: 1500 });
+    await makePost(u.token, { ...basePost, title: 'B10 cost 3000', cost: 3000 });
+
+    const r1 = await api('GET', '/posts?minCost=1000&maxCost=2000');
+    assert.equal(r1.status, 200);
+    assert.equal(r1.body.items.length, 1);
+    assert.equal(r1.body.items[0].title, 'B10 cost 1500');
+
+    const r2 = await api('GET', '/posts?minCost=1000');
+    assert.equal(r2.status, 200);
+    assert.equal(r2.body.items.length, 2);
+
+    const r3 = await api('GET', '/posts?maxCost=1000');
+    assert.equal(r3.status, 200);
+    assert.equal(r3.body.items.length, 1);
+
+    const r4 = await api('GET', '/posts?minCost=2000&maxCost=1000');
+    assert.equal(r4.status, 400);
+    assert.equal(r4.body.error.code, 'INVALID_COST_RANGE');
+  });
+
+  test('Phân trang con trỏ: trang 1 và 2 không lặp; tổng đúng số bài', async () => {
+    const u = await register('spage');
+    for (let i = 1; i <= 7; i++) {
+      await makePost(u.token, { ...basePost, title: `B10 page ${i}` });
+      await sleep(20);
+    }
+
+    const p1 = await api('GET', '/posts?limit=3');
+    assert.equal(p1.status, 200);
+    assert.equal(p1.body.items.length, 3);
+    assert.equal(p1.body.hasMore, true);
+    assert.ok(p1.body.nextCursor);
+    const p1Ids = p1.body.items.map((i) => i._id);
+
+    const p2 = await api('GET', `/posts?limit=3&cursor=${p1.body.nextCursor}`);
+    assert.equal(p2.status, 200);
+    assert.equal(p2.body.items.length, 3);
+    assert.equal(p2.body.hasMore, true);
+    assert.ok(p2.body.nextCursor);
+    const p2Ids = p2.body.items.map((i) => i._id);
+
+    for (const id of p1Ids) {
+      assert.equal(p2Ids.includes(id), false, `Trang 2 lặp bài ${id} của trang 1`);
+    }
+
+    const p3 = await api('GET', `/posts?limit=3&cursor=${p2.body.nextCursor}`);
+    assert.equal(p3.status, 200);
+    assert.equal(p3.body.items.length, 1);
+    assert.equal(p3.body.hasMore, false);
+    assert.equal(p3.body.nextCursor, null);
+    const p3Ids = p3.body.items.map((i) => i._id);
+
+    const allIds = [...p1Ids, ...p2Ids, ...p3Ids];
+    assert.equal(allIds.length, 7);
+    assert.equal(new Set(allIds).size, 7, 'Có bài lặp giữa các trang');
+  });
+
+  test('author không tồn tại → trả danh sách rỗng (không 404)', async () => {
+    const r = await api('GET', '/posts?author=khong_ton_tai_' + uid);
+    assert.equal(r.status, 200);
+    assert.equal(r.body.items.length, 0);
+    assert.equal(r.body.hasMore, false);
+    assert.equal(r.body.nextCursor, null);
+  });
+});
