@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { CursorPage, Post } from '../types';
+import type { Comment, CursorPage, Post } from '../types';
 
 export interface CreatePostBody {
   title: string;
@@ -80,6 +80,23 @@ export const postsApi = {
   /** Xoá bài. Server: DELETE /api/posts/:id */
   deletePost: async (id: string): Promise<{ deleted: boolean }> => {
     const res = await api.delete<{ deleted: boolean }>(`/posts/${id}`);
+    return res.data;
+  },
+
+  getComments: async (postId: string, cursor?: string | null): Promise<CursorPage<Comment>> => {
+    const params: Record<string, unknown> = {};
+    if (cursor) params.cursor = cursor;
+    const res = await api.get<CursorPage<Comment>>(`/posts/${postId}/comments`, { params });
+    return res.data;
+  },
+
+  createComment: async (postId: string, content: string, parentId?: string): Promise<Comment> => {
+    const res = await api.post<Comment>(`/posts/${postId}/comments`, { content, parentId });
+    return res.data;
+  },
+
+  deleteComment: async (commentId: string): Promise<{ deleted: number }> => {
+    const res = await api.delete<{ deleted: number }>(`/comments/${commentId}`);
     return res.data;
   },
 };
