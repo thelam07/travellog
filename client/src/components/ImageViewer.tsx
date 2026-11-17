@@ -9,6 +9,7 @@ import { Link } from 'react-router';
 import type { Post } from '../types';
 import { timeAgo } from '../utils/format';
 import { Avatar } from './Avatar';
+import { CommentList } from './comments/CommentList';
 import { LikeButton } from './LikeButton';
 
 export interface ViewerImage {
@@ -22,16 +23,19 @@ interface Props {
   onClose: () => void;
   /** Có bài thì hiện cột bên phải kiểu Facebook: tác giả, nội dung, nút Thích, bình luận */
   post?: Post;
+  /** Báo cho trang bên dưới khi thêm / xoá bình luận trong cột bên phải (delta = +1, -n) */
+  onCommentCountChange?: (delta: number) => void;
 }
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
 const SWIPE_PX = 50;
 
-export default function ImageViewer({ images, startIndex = 0, onClose, post }: Props) {
+export default function ImageViewer({ images, startIndex = 0, onClose, post, onCommentCountChange }: Props) {
   const [index, setIndex] = useState(startIndex);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [commentCount, setCommentCount] = useState(post?.commentCount ?? 0);
   const drag = useRef<{ x: number; y: number; ox: number; oy: number; moved: boolean; onBackdrop: boolean } | null>(null);
   const many = images.length > 1;
 
@@ -56,6 +60,8 @@ export default function ImageViewer({ images, startIndex = 0, onClose, post }: P
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Đang mở hộp xác nhận (vd. xoá bình luận) thì Esc chỉ đóng hộp đó, không đóng trình xem
+      if (document.querySelector('.viewer .dialog-backdrop')) return;
       if (e.key === 'Escape') return onClose();
       // Đang gõ bình luận thì phím mũi tên, + − 0 là để gõ chữ, không đổi ảnh
       if ((e.target as HTMLElement).closest('input, textarea')) return;
@@ -175,9 +181,17 @@ export default function ImageViewer({ images, startIndex = 0, onClose, post }: P
           {post.content && <p className="viewer-content">{post.content}</p>}
           <div className="viewer-actions">
             <LikeButton postId={post._id} initialLiked={post.likedByMe} initialCount={post.likeCount} />
-            <span className="muted">💬 {post.commentCount}</span>
+            <span className="muted">💬 {commentCount}</span>
           </div>
-          {/* TODO(C8): gắn danh sách + ô bình luận của C vào đây khi C xong */}
+          {/* Bình luận dùng component của C (C8/C9) */}
+          <CommentList
+            postId={post._id}
+            postAuthorId={post.author._id}
+            onCommentCountChange={(delta) => {
+              setCommentCount((c) => Math.max(0, c + delta));
+              onCommentCountChange?.(delta);
+            }}
+          />
         </aside>
       )}
     </div>,
