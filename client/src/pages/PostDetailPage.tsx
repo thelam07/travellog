@@ -16,6 +16,7 @@ import { PageSpinner } from '../components/Spinner';
 import { PostGallery } from '../components/PostGallery';
 import { PostMeta } from '../components/PostMeta';
 import { CommentList } from '../components/comments/CommentList';
+import { ReportDialog } from '../components/ReportDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useFetch } from '../hooks/useFetch';
 import { timeAgo } from '../utils/format';
@@ -27,6 +28,7 @@ export default function PostDetailPage() {
   const { user } = useAuth();
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const url = id ? `/posts/${id}` : null;
@@ -59,6 +61,7 @@ export default function PostDetailPage() {
   }
 
   const isOwner = user && post.author._id === user._id;
+  const canReport = Boolean(user && user.role === 'member' && user._id !== post.author._id);
   const isHidden = post.status === 'hidden';
 
   const handleDelete = async () => {
@@ -145,6 +148,15 @@ export default function PostDetailPage() {
             initialCount={post.likeCount}
           />
           <span className="post-detail-comments-count">💬 {commentCount}</span>
+          {canReport && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm report-post-btn"
+              onClick={() => setReportOpen(true)}
+            >
+              🚩 Báo cáo
+            </button>
+          )}
         </div>
 
         <section className="post-comments-section">
@@ -172,6 +184,12 @@ export default function PostDetailPage() {
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => !deleting && setConfirmOpen(false)}
+      />
+
+      <ReportDialog
+        open={reportOpen}
+        postId={post._id}
+        onClose={() => setReportOpen(false)}
       />
     </div>
   );

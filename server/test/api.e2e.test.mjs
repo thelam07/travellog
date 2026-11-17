@@ -900,3 +900,109 @@ describe('Bình luận bài viết (C8 - BR03, BR06, BR08, BR22)', () => {
     assert.equal(mismatch.status, 404);
   });
 });
+
+describe('Báo cáo bài viết (C10 - F12, BR14)', () => {
+  const samplePost = {
+    title: 'Bài viết cần báo cáo',
+    content: 'Nội dung bài viết mẫu để thử báo cáo vi phạm',
+    tripDate: '2026-10-01',
+    cost: 500000,
+    visibility: 'public',
+    location: JSON.stringify({ name: 'Hà Nội' }),
+  };
+
+  test('Báo cáo lần đầu thành công -> 201, populate đúng', async () => {
+    const author = await register('repauthor1');
+    const reporter = await register('reporter1');
+    const post = await makePost(author.token, samplePost);
+
+    const res = await api('POST', '/reports', {
+      token: reporter.token,
+      json: {
+        postId: post._id,
+        reason: 'spam',
+        note: 'Bài viết spam quảng cáo',
+      },
+    });
+
+    assert.equal(res.status, 201);
+    assert.equal(res.body.reason, 'spam');
+    assert.equal(res.body.note, 'Bài viết spam quảng cáo');
+    assert.equal(res.body.status, 'pending');
+    assert.equal(res.body.handledBy, null);
+    assert.equal(res.body.post._id, post._id);
+    assert.equal(res.body.reporter._id, reporter.user._id);
+  });
+
+  test('Báo cáo trùng cùng post và reporter -> 409 ALREADY_REPORTED', async () => {
+    const author = await register('repauthor2');
+    const reporter = await register('reporter2');
+    const post = await makePost(author.token, samplePost);
+
+    const first = await api('POST', '/reports', {
+      token: reporter.token,
+      json: { postId: post._id, reason: 'offensive' },
+    });
+    assert.equal(first.status, 201);
+
+    const second = await api('POST', '/reports', {
+      token: reporter.token,
+      json: { postId: post._id, reason: 'other', note: 'Thử lại' },
+    });
+    assert.equal(second.status, 409);
+    assert.equal(second.body.error.code, 'ALREADY_REPORTED');
+  });
+
+  test('Lý do sai hoặc note quá dài -> 400', async () => {
+    const author = await register('repauthor3');
+    const reporter = await register('reporter3');
+    const post = await makePost(author.token, samplePost);
+
+    const badReason = await api('POST', '/reports', {
+      token: reporter.token,
+      json: { postId: post._id, reason: 'invalid_reason' },
+    });
+    assert.equal(badReason.status, 400);
+
+    const tooLongNote = await api('POST', '/reports', {
+      token: reporter.token,
+      json: { postId: post._id, reason: 'spam', note: 'a'.repeat(501) },
+    });
+    assert.equal(tooLongNote.status, 400);
+  });
+
+  test('Bài không tồn tại hoặc không xem được -> 404', async () => {
+    const author = await register('repauthor4');
+    const stranger = await register('repstranger4');
+    const followersPost = await makePost(author.token, { ...samplePost, visibility: 'followers' });
+
+    const notFound = await api('POST', '/reports', {
+      token: stranger.token,
+      json: { postId: '654321654321654321654321', reason: 'spam' },
+    });
+    assert.equal(notFound.status, 404);
+
+    const cannotView = await api('POST', '/reports', {
+      token: stranger.token,
+      json: { postId: followersPost._id, reason: 'spam' },
+    });
+    assert.equal(cannotView.status, 404);
+  });
+
+  test('Khách -> 401, Admin -> 403', async () => {
+    const author = await register('repauthor5');
+    const post = await makePost(author.token, samplePost);
+
+    const guest = await api('POST', '/reports', {
+      json: { postId: post._id, reason: 'spam' },
+    });
+    assert.equal(guest.status, 401);
+
+    const adminRes = await api('POST', '/reports', {
+      token: admin,
+      json: { postId: post._id, reason: 'spam' },
+    });
+    assert.equal(adminRes.status, 403);
+    assert.equal(adminRes.body.error.code, 'FORBIDDEN_ROLE');
+  });
+});
