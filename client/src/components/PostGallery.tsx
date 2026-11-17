@@ -10,9 +10,11 @@ export interface PostGalleryProps {
   images: PostImage[];
   /** Truyền bài thì trình xem ảnh có cột bên phải: tác giả, nút Thích, bình luận */
   post?: Post;
+  /** Thêm / xoá bình luận trong trình xem ảnh thì báo cho trang chi tiết */
+  onCommentCountChange?: (delta: number) => void;
 }
 
-export function PostGallery({ images, post }: PostGalleryProps) {
+export function PostGallery({ images, post, onCommentCountChange }: PostGalleryProps) {
   const [active, setActive] = useState(0);
   const [viewing, setViewing] = useState(false);
   if (!images.length) return null;
@@ -45,6 +47,7 @@ export function PostGallery({ images, post }: PostGalleryProps) {
           images={images.map((img, i) => ({ url: img.url, alt: `${alt} – ảnh ${i + 1}` }))}
           startIndex={active}
           post={post}
+          onCommentCountChange={onCommentCountChange}
           onClose={() => setViewing(false)}
         />
       )}
