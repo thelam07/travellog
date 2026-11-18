@@ -1,12 +1,13 @@
 // client/src/pages/ExplorePage.tsx
 // Trang Khám phá /explore (B11).
 // - Đọc q từ URL; q bắt đầu bằng "#" thì gửi tag (bỏ #, chữ thường), còn lại gửi q.
-// - Có 2 ô chi phí từ / đến (minCost / maxCost).
+// - Có 2 ô chi phí từ / đến (minCost / maxCost) — chỉ tải lại khi URL đổi (Enter/blur).
 // - Danh sách dùng PostCard của C, cuộn vô hạn bằng useInfiniteScroll của C.
 // - Không có kết quả → EmptyState.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
+import { parseError } from '../api/client';
 import { postsApi } from '../api/posts';
 import { EmptyState } from '../components/EmptyState';
 import { PostCard } from '../components/PostCard';
@@ -26,7 +27,7 @@ export default function ExplorePage() {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Tag tách riêng khi URL có q bắt đầu bằng # (debounce 400ms ở SearchBox).
+  // State cho ô input (chỉ để hiển thị, không trigger API).
   const [minCost, setMinCost] = useState(urlMinCost);
   const [maxCost, setMaxCost] = useState(urlMaxCost);
   // Dùng để bỏ qua response cũ khi đổi query.
@@ -37,6 +38,8 @@ export default function ExplorePage() {
   const isHashtag = trimmedQ.startsWith('#');
   const q = isHashtag ? undefined : trimmedQ || undefined;
   const tag = isHashtag ? trimmedQ.slice(1).toLowerCase() : undefined;
+  const minN = urlMinCost.trim() ? Number(urlMinCost) : undefined;
+  const maxN = urlMaxCost.trim() ? Number(urlMaxCost) : undefined;
 
   const loadPage = useCallback(
     async (cursor: string | null, reset: boolean) => {
@@ -44,8 +47,6 @@ export default function ExplorePage() {
       setLoading(true);
       if (reset) setError(null);
       try {
-        const minN = minCost.trim() ? Number(minCost) : undefined;
-        const maxN = maxCost.trim() ? Number(maxCost) : undefined;
         const page = await postsApi.search({
           q,
           tag,
@@ -59,15 +60,24 @@ export default function ExplorePage() {
         setHasMore(page.hasMore);
       } catch (err) {
         if (myId !== requestIdRef.current) return;
-        setError(err instanceof Error ? err.message : 'Đã có lỗi xảy ra.');
+        setError(parseError(err).message);
       } finally {
         if (myId === requestIdRef.current) setLoading(false);
       }
     },
-    [q, tag, minCost, maxCost],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [q, tag, urlMinCost, urlMaxCost],
   );
 
-  // Tải lại khi q / tag / cost đổi.
+  // Đồng bộ state input khi URL đổi (vd: bấm nút back).
+  useEffect(() => {
+    setMinCost(urlMinCost);
+  }, [urlMinCost]);
+  useEffect(() => {
+    setMaxCost(urlMaxCost);
+  }, [urlMaxCost]);
+
+  // Tải lại khi q / tag / cost đổi (URL đổi).
   useEffect(() => {
     loadPage(null, true);
   }, [loadPage]);
