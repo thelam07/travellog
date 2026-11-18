@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import { Link, NavLink, Outlet } from 'react-router';
 import BottomNav from '../components/BottomNav';
 import NotificationBell from '../components/NotificationBell';
 import SearchBox from '../components/SearchBox';
@@ -10,21 +10,22 @@ import { useAuth } from '../contexts/AuthContext';
 // Điện thoại: các link trên header (desktop-only) ẩn đi, thay bằng BottomNav dưới đáy.
 export default function MainLayout() {
   const { user } = useAuth();
-  const location = useLocation();
-  // B11: ở trang /explore có SearchBox riêng trong trang. Nếu header cũng tự navigate,
-  // hai ô giành nhau URL → lặp vô hạn. Ẩn ô header khi đang ở /explore.
-  const showHeaderSearch = !location.pathname.startsWith('/explore');
+  // B11: trang /explore có SearchBox riêng tự cập nhật URL khi gõ. Ô trên header luôn hiện như bản mẫu
+  // nhưng KHÔNG tự điều hướng (autoNavigate={false}), chỉ chuyển trang khi Enter / chọn gợi ý,
+  // nên hai ô không giành nhau URL.
   return (
     <div className="app">
       <header className="header">
         <div className="container header-inner">
           <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true">✈</span>TravelLog</Link>
-          {showHeaderSearch && (
-            <div className="desktop-only header-search">
-              {/* B11: ô tìm kiếm — gõ xong 400ms tự chuyển tới /explore?q=... */}
-              <SearchBox suggestUsers placeholder="Tìm địa điểm, #hashtag hoặc @người dùng" />
-            </div>
-          )}
+          <div className="desktop-only header-search">
+            {/* B11 + E01: Enter thì tới /explore?q=..., gõ @ thì gợi ý người dùng */}
+            <SearchBox
+              suggestUsers
+              autoNavigate={false}
+              placeholder="Tìm địa điểm, #hashtag hoặc @người dùng"
+            />
+          </div>
           <nav className="nav">
             {user && <NavLink to="/" end className="desktop-only">Bảng tin</NavLink>}
             <NavLink to="/explore" className="desktop-only">Khám phá</NavLink>
