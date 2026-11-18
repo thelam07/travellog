@@ -137,7 +137,10 @@ export function PlaceInput({
           lat: detail.lat,
           lng: detail.lng,
         };
-        suppressNextRef.current = true; // useEffect sẽ thấy query không đổi → không gọi lại
+        // Chỉ chặn lần gọi tiếp theo khi tên mới thật sự khác từ khoá đang gõ.
+        // Nếu trùng (vd: gõ "Hội An" chọn "Hội An"), useEffect debounced sẽ không chạy
+        // → nếu vẫn đặt suppressNextRef = true sẽ kẹt, lần gõ sau bị bỏ qua.
+        if (next.name.trim() !== debounced) suppressNextRef.current = true;
         lastPickedNameRef.current = next.name;
         setQuery(next.name);
         setSuggestions([]);
@@ -145,7 +148,7 @@ export function PlaceInput({
         onChange(next);
       } catch (err) {
         // Chi tiết thất bại nhưng user đã chọn gợi ý → vẫn giữ tên.
-        suppressNextRef.current = true;
+        if (s.text.trim() !== debounced) suppressNextRef.current = true;
         lastPickedNameRef.current = s.text;
         setQuery(s.text);
         setHint(parseError(err).message || 'Đang nhập tay');
@@ -156,7 +159,7 @@ export function PlaceInput({
         sessionTokenRef.current = newToken();
       }
     },
-    [onChange],
+    [onChange, debounced],
   );
 
   // Đóng dropdown khi click ra ngoài.
