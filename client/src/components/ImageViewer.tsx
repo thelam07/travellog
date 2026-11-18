@@ -183,7 +183,9 @@ export default function ImageViewer({ images, startIndex = 0, onClose, post, onC
             <LikeButton postId={post._id} initialLiked={post.likedByMe} initialCount={post.likeCount} />
             <span className="muted">💬 {commentCount}</span>
           </div>
-          {/* Bình luận dùng component của C (C8/C9) */}
+          {/* Bình luận dùng component của C (C8/C9), đặt trong thẻ có tiêu đề như bản mẫu */}
+          <section className="viewer-comments">
+            <h3 className="viewer-comments-title">Bình luận</h3>
           <CommentList
             postId={post._id}
             postAuthorId={post.author._id}
@@ -192,6 +194,7 @@ export default function ImageViewer({ images, startIndex = 0, onClose, post, onC
               onCommentCountChange?.(delta);
             }}
           />
+          </section>
         </aside>
       )}
     </div>,

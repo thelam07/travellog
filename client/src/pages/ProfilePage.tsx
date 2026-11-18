@@ -5,11 +5,12 @@ import { parseError } from '../api/client';
 import FollowButton from '../components/FollowButton';
 import FollowListDialog from '../components/FollowListDialog';
 import ImageViewer from '../components/ImageViewer';
+import ProfilePosts from '../components/ProfilePosts';
 import UserInitial from '../components/UserInitial';
 import { useAuth } from '../contexts/AuthContext';
 import type { Profile } from '../types';
 
-// F04. Phần danh sách bài (B) gắn vào dưới header khi có PostList.
+// F04. Header trang cá nhân + danh sách bài (GET /posts?author=, B10) bên dưới.
 export default function ProfilePage() {
   const { username = '' } = useParams();
   const { user } = useAuth();
@@ -42,7 +43,7 @@ export default function ProfilePage() {
     setProfile((p) => p && { ...p, isFollowing: following, followerCount: p.followerCount + (following ? 1 : -1) });
 
   return (
-    <>
+    <div className="profile-page stack">
       <section className="profile-header card">
         {/* (Mở rộng – A) Có ảnh đại diện thì bấm để xem toàn màn hình */}
         {profile.avatar ? (
@@ -98,6 +99,10 @@ export default function ProfilePage() {
         />
       )}
       {list && <FollowListDialog username={profile.username} kind={list} onClose={() => setList(null)} />}
-    </>
+      <section className="profile-posts" aria-label="Bài viết">
+        <h2 className="profile-posts-title">Bài viết</h2>
+        <ProfilePosts key={profile.username} username={profile.username} isSelf={isSelf} />
+      </section>
+    </div>
   );
 }

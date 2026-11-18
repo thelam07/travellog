@@ -33,6 +33,13 @@ export const postsApi = {
     return res.data;
   },
 
+  // B10: danh sách + tìm kiếm bài (GET /posts). A dùng cho danh sách bài trên trang cá nhân (author).
+  list: async (params: { q?: string; tag?: string; author?: string; minCost?: number; maxCost?: number; cursor?: string | null }): Promise<CursorPage<Post>> => {
+    const clean = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+    const res = await api.get<CursorPage<Post>>('/posts', { params: clean });
+    return res.data;
+  },
+
   getPost: async (id: string): Promise<Post> => {
     const res = await api.get<Post>(`/posts/${id}`);
     return res.data;
@@ -80,6 +87,19 @@ export const postsApi = {
   /** Xoá bài. Server: DELETE /api/posts/:id */
   deletePost: async (id: string): Promise<{ deleted: boolean }> => {
     const res = await api.delete<{ deleted: boolean }>(`/posts/${id}`);
+    return res.data;
+  },
+
+  /** Tìm kiếm bài (B10, mục 5.2). Server: GET /api/posts?q=...&tag=...&minCost=...&maxCost=...&cursor=... */
+  search: async (params: {
+    q?: string;
+    tag?: string;
+    author?: string;
+    minCost?: number;
+    maxCost?: number;
+    cursor?: string | null;
+  }): Promise<CursorPage<Post>> => {
+    const res = await api.get<CursorPage<Post>>('/posts', { params });
     return res.data;
   },
 
