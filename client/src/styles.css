@@ -478,12 +478,15 @@ a.btn:hover { text-decoration: none; }
   border: 0;
   cursor: zoom-in;
   width: 100%;
-  aspect-ratio: 4 / 3;
-  background: var(--surface-2);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  /* Khung ôm theo ảnh (không cố định 4:3, không nền xám) để ảnh ngang không bị dải xám trên dưới */
+  background: none;
+  display: flex;
+  justify-content: center;
 }
-.post-gallery-main img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.post-gallery-main img {
+  display: block; max-width: 100%; height: auto; max-height: 560px;
+  object-fit: contain; border-radius: var(--radius-sm);
+}
 .post-gallery-thumbs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
 .post-gallery-thumb {
   flex: 0 0 auto;
