@@ -104,6 +104,13 @@ export class UsersController {
     return toUser(updated);
   }
 
+  @Get('suggestions')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('member')
+  getSuggestions(@CurrentUser() user: AuthUser) {
+    return this.usersService.getSuggestions(user.id);
+  }
+
   // F04: khách xem được; có token thì biết mình đã theo dõi chưa.
   @Get(':username')
   @UseGuards(OptionalJwtAuthGuard)

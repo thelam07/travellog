@@ -1477,3 +1477,150 @@ describe('Thông báo trả lời bình luận (A – mở rộng của BR08)', 
     assert.deepEqual(await types(d), ['reply']);
   });
 });
+
+describe('Thống kê địa điểm (C13 - F15)', () => {
+  test('Khách gọi 401, thành viên gọi 403', async () => {
+    const guest = await api('GET', '/stats/locations');
+    assert.equal(guest.status, 401);
+
+    const member = await register('statsmem');
+    const memRes = await api('GET', '/stats/locations', { token: member.token });
+    assert.equal(memRes.status, 403);
+  });
+
+  test('Top địa điểm đúng thứ tự, gộp Hội An và hoi an khi không có placeId', async () => {
+    const author = await register('statsauthor');
+    const suffix = Date.now();
+    const nameHoiAn = `Hội An ${suffix}`;
+    const nameHoiAnLower = `hoi an ${suffix}`;
+    const nameDanang = `Đà Nẵng ${suffix}`;
+    const placeIdDanang = `place_danang_${suffix}`;
+
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Hội An 1',
+      location: { name: nameHoiAnLower },
+    });
+
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Hội An 2',
+      location: { name: nameHoiAn },
+    });
+
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Đà Nẵng 1',
+      location: { name: nameDanang, placeId: placeIdDanang },
+    });
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Đà Nẵng 2',
+      location: { name: nameDanang, placeId: placeIdDanang },
+    });
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Đà Nẵng 3',
+      location: { name: nameDanang, placeId: placeIdDanang },
+    });
+
+    const res = await api('GET', '/stats/locations?limit=50', { token: admin });
+    assert.equal(res.status, 200);
+    assert.ok(Array.isArray(res.body));
+
+    const daNang = res.body.find((it) => it._id === placeIdDanang);
+    assert.ok(daNang);
+    assert.equal(daNang.count, 3);
+    assert.equal(daNang.name, nameDanang);
+
+    const expectedHoiAnId = `hoi an ${suffix}`;
+    const hoiAn = res.body.find((it) => it._id === expectedHoiAnId);
+    assert.ok(hoiAn);
+    assert.equal(hoiAn.count, 2);
+    assert.equal(hoiAn.name, nameHoiAn);
+
+    const daNangIndex = res.body.findIndex((it) => it._id === placeIdDanang);
+    const hoiAnIndex = res.body.findIndex((it) => it._id === expectedHoiAnId);
+    assert.ok(daNangIndex < hoiAnIndex);
+  });
+
+  test('limit tham số hoạt động đúng', async () => {
+    const r = await api('GET', '/stats/locations?limit=1', { token: admin });
+    assert.equal(r.status, 200);
+    assert.equal(r.body.length, 1);
+  });
+});
+
+describe('Gợi ý người nên theo dõi (C14 - N02)', () => {
+  test('Khách gọi 401, admin gọi 403', async () => {
+    const guest = await api('GET', '/users/suggestions');
+    assert.equal(guest.status, 401);
+
+    const r = await api('GET', '/users/suggestions', { token: admin });
+    assert.equal(r.status, 403);
+  });
+
+  test('Gợi ý loại trừ chính mình, người đã theo dõi, admin, tài khoản bị khoá', async () => {
+    const userMe = await register('c14me');
+    const userFollowed = await register('c14flwed');
+    const userLocked = await register('c14locked');
+    const userCandidate = await register('c14cand');
+
+    await api('POST', '/follows', { token: userMe.token, json: { userId: userFollowed.user._id } });
+
+    await api('PATCH', `/admin/users/${userLocked.user._id}`, { token: admin, json: { isLocked: true } });
+
+    const res = await api('GET', '/users/suggestions', { token: userMe.token });
+    assert.equal(res.status, 200);
+    assert.ok(Array.isArray(res.body));
+    assert.ok(res.body.length <= 5);
+
+    const ids = res.body.map((u) => u._id);
+    assert.ok(!ids.includes(userMe.user._id));
+    assert.ok(!ids.includes(userFollowed.user._id));
+    assert.ok(!ids.includes(userLocked.user._id));
+
+    for (const item of res.body) {
+      assert.ok(item._id);
+      assert.ok(item.username);
+      assert.ok(item.displayName);
+    }
+  });
+
+  test('Ưu tiên người được người mình theo dõi theo dõi (bạn chung)', async () => {
+    const u1 = await register('c14u1');
+    const u2 = await register('c14u2');
+    const u3 = await register('c14u3');
+
+    await api('POST', '/follows', { token: u1.token, json: { userId: u2.user._id } });
+    await api('POST', '/follows', { token: u2.token, json: { userId: u3.user._id } });
+
+    const res = await api('GET', '/users/suggestions', { token: u1.token });
+    assert.equal(res.status, 200);
+    const ids = res.body.map((u) => u._id);
+    assert.ok(ids.includes(u3.user._id));
+  });
+
+  test('Theo dõi từ gợi ý thì sau đó bảng tin có bài của người đó', async () => {
+    const reader = await register('c14reader');
+    const writer = await register('c14writer');
+
+    await makePost(writer.token, {
+      ...basePost,
+      title: 'Bài viết của writer vừa theo dõi',
+    });
+
+    const feedBefore = await api('GET', '/feed', { token: reader.token });
+    assert.equal(feedBefore.status, 200);
+    const hasPostBefore = feedBefore.body.items.some((p) => p.author._id === writer.user._id);
+    assert.equal(hasPostBefore, false);
+
+    const followRes = await api('POST', '/follows', { token: reader.token, json: { userId: writer.user._id } });
+    assert.equal(followRes.status, 201);
+
+    const feedAfter = await api('GET', '/feed', { token: reader.token });
+    assert.equal(feedAfter.status, 200);
+    const hasPostAfter = feedAfter.body.items.some((p) => p.author._id === writer.user._id);
+    assert.equal(hasPostAfter, true);
+  });
+});

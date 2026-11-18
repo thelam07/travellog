@@ -1,10 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Role } from '../common/auth-user';
 import { RESERVED_USERNAMES } from '../auth/dto/auth.dto';
 import { escapeRegex, normalizeKey } from '../common/utils/text';
+import { Follow } from '../follows/schemas/follow.schema';
 import { User, USER_SUMMARY_FIELDS, UserDocument, userSearchKey } from './schemas/user.schema';
 import { toUserSummary } from './user.mapper';
 
@@ -19,7 +20,10 @@ export interface NewUserInput {
 
 @Injectable()
 export class UsersService implements OnModuleInit {
-  constructor(@InjectModel(User.name) private readonly users: Model<User>) {}
+  constructor(
+    @InjectModel(User.name) private readonly users: Model<User>,
+    @InjectModel(Follow.name) private readonly followModel: Model<Follow>,
+  ) {}
 
   async onModuleInit() {
     await Promise.all([this.backfillSearchKeys(), this.ensureOwner()]);
@@ -102,5 +106,136 @@ export class UsersService implements OnModuleInit {
       { passwordHash: await this.hashPassword(password), passwordChangedAt: changedAt },
     );
     return changedAt;
+  }
+
+  async getSuggestions(userId: string) {
+    const myId = new Types.ObjectId(userId);
+    const myFollows = await this.followModel.find({ follower: myId }).select('following').lean();
+    const myFollowingIds = myFollows.map((f) => f.following);
+    const excludedIds = [myId, ...myFollowingIds];
+
+    const results: any[] = [];
+    const chosenSet = new Set<string>();
+
+    if (myFollowingIds.length > 0) {
+      const fof = await this.followModel.aggregate([
+        {
+          $match: {
+            follower: { $in: myFollowingIds },
+            following: { $nin: excludedIds },
+          },
+        },
+        {
+          $group: {
+            _id: '$following',
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $sort: { count: -1 },
+        },
+        {
+          $limit: 5,
+        },
+      ]);
+
+      const fofIds = fof.map((r) => r._id);
+      if (fofIds.length > 0) {
+        const fofUsers = await this.users
+          .find({
+            _id: { $in: fofIds },
+            role: 'member',
+            isLocked: false,
+          })
+          .select(USER_SUMMARY_FIELDS)
+          .lean();
+
+        const userMap = new Map(fofUsers.map((u) => [String(u._id), u]));
+        for (const item of fof) {
+          const u = userMap.get(String(item._id));
+          if (u && results.length < 5 && !chosenSet.has(String(u._id))) {
+            results.push(u);
+            chosenSet.add(String(u._id));
+          }
+        }
+      }
+    }
+
+    if (results.length < 5) {
+      const need = 5 - results.length;
+      const currentExcluded = [
+        ...excludedIds,
+        ...Array.from(chosenSet).map((id) => new Types.ObjectId(id)),
+      ];
+
+      const popular = await this.followModel.aggregate([
+        {
+          $match: {
+            following: { $nin: currentExcluded },
+          },
+        },
+        {
+          $group: {
+            _id: '$following',
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $sort: { count: -1 },
+        },
+        {
+          $limit: need * 3,
+        },
+      ]);
+
+      const popIds = popular.map((r) => r._id);
+      if (popIds.length > 0) {
+        const popUsers = await this.users
+          .find({
+            _id: { $in: popIds },
+            role: 'member',
+            isLocked: false,
+          })
+          .select(USER_SUMMARY_FIELDS)
+          .lean();
+
+        const popMap = new Map(popUsers.map((u) => [String(u._id), u]));
+        for (const item of popular) {
+          const u = popMap.get(String(item._id));
+          if (u && results.length < 5 && !chosenSet.has(String(u._id))) {
+            results.push(u);
+            chosenSet.add(String(u._id));
+          }
+        }
+      }
+    }
+
+    if (results.length < 5) {
+      const need = 5 - results.length;
+      const currentExcluded = [
+        ...excludedIds,
+        ...Array.from(chosenSet).map((id) => new Types.ObjectId(id)),
+      ];
+
+      const newMembers = await this.users
+        .find({
+          _id: { $nin: currentExcluded },
+          role: 'member',
+          isLocked: false,
+        })
+        .select(USER_SUMMARY_FIELDS)
+        .sort({ createdAt: -1 })
+        .limit(need)
+        .lean();
+
+      for (const u of newMembers) {
+        if (results.length < 5 && !chosenSet.has(String(u._id))) {
+          results.push(u);
+          chosenSet.add(String(u._id));
+        }
+      }
+    }
+
+    return results.map(toUserSummary).filter(Boolean);
   }
 }
