@@ -372,6 +372,37 @@ export class PostsService {
     );
   }
 
+  // B14 (N01): bản đồ trang cá nhân — các bài của tác giả có toạ độ, đã qua visibilityFilter.
+  // Trả MapPoint[] (chỉ _id, title, name, lat, lng) để payload nhỏ.
+  async listMapPoints(authorId: Types.ObjectId, viewer?: AuthUser): Promise<{
+    postId: string;
+    title: string;
+    name: string;
+    lat: number;
+    lng: number;
+  }[]> {
+    const filter = await this.visibilityFilter(viewer);
+    const posts = await this.postModel
+      .find({
+        ...filter,
+        author: authorId,
+        'location.lat': { $ne: null },
+        'location.lng': { $ne: null },
+      })
+      .select({ title: 1, location: 1 })
+      .sort({ tripDate: -1, _id: -1 })
+      .lean();
+    return posts
+      .filter((p) => typeof p.location?.lat === 'number' && typeof p.location?.lng === 'number')
+      .map((p) => ({
+        postId: String(p._id),
+        title: p.title,
+        name: p.location?.name ?? '',
+        lat: p.location.lat as number,
+        lng: p.location.lng as number,
+      }));
+  }
+
   // Parse chuỗi JSON keepImageIds thành Set<string>. Trả null nếu không gửi (nghĩa là giữ tất cả).
   // Ném 400 nếu chuỗi không phải JSON hợp lệ hoặc chứa _id không thuộc bài.
   private parseKeepImageIds(raw: string | undefined, currentImages: PostImage[]): Set<string> | null {

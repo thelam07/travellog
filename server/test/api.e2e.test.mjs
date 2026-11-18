@@ -1311,3 +1311,121 @@ describe('Ẩn bình luận khi khoá tài khoản (C12 - BR09)', () => {
     assert.equal(guestGetUnlocked.body.items[0].replies.length, 1);
   });
 });
+
+// B12 (mục 10.1): Google Places — server giữ key, autocomplete + detail.
+// Mọi route đều cần JwtAuthGuard; thiếu key → 502 PLACES_UNAVAILABLE với thông báo tiếng Việt.
+describe('Gợi ý và chi tiết địa điểm Google Places (B12, mục 10.1)', () => {
+  test('Không có token → 401', async () => {
+    const r = await api('GET', '/places/autocomplete?q=Hà Nội');
+    assert.equal(r.status, 401);
+  });
+
+  test('Không có GOOGLE_PLACES_KEY → autocomplete và detail đều trả 502 PLACES_UNAVAILABLE', async () => {
+    const user = await register('placeuser');
+    const ac = await api('GET', '/places/autocomplete?q=Hà Nội', { token: user.token });
+    assert.equal(ac.status, 502);
+    assert.equal(ac.body?.error?.code, 'PLACES_UNAVAILABLE');
+    assert.match(ac.body?.error?.message ?? '', /nhập tay/i);
+
+    const det = await api('GET', '/places/abc123', { token: user.token });
+    assert.equal(det.status, 502);
+    assert.equal(det.body?.error?.code, 'PLACES_UNAVAILABLE');
+  });
+
+  test('q rỗng → 400 VALIDATION_ERROR', async () => {
+    const user = await register('placeempty');
+    const r = await api('GET', '/places/autocomplete?q=', { token: user.token });
+    assert.equal(r.status, 400);
+    assert.equal(r.body?.error?.code, 'VALIDATION_ERROR');
+    assert.ok(r.body?.error?.details?.q);
+  });
+
+  test('q dài hơn 100 kí tự → 400 VALIDATION_ERROR', async () => {
+    const user = await register('placelong');
+    const longQ = 'a'.repeat(101);
+    const r = await api('GET', `/places/autocomplete?q=${longQ}`, { token: user.token });
+    assert.equal(r.status, 400);
+    assert.equal(r.body?.error?.code, 'VALIDATION_ERROR');
+    assert.ok(r.body?.error?.details?.q);
+  });
+});
+
+// B14 (N01): bản đồ trang cá nhân — các bài có toạ độ của tác giả, qua visibilityFilter.
+// Trả MapPoint[] (postId, title, name, lat, lng).
+describe('Bản đồ trang cá nhân (B14, N01)', () => {
+  // POST /api/posts không nhận lat/lng qua DTO (vì client gửi JSON string location → mongoose set sub-doc);
+  // test phải tạo bài qua PostModel.save() để gắn placeId/address/lat/lng đúng schema.
+  async function makePostWithCoords(token, fields, coords) {
+    const postRes = await api('POST', '/posts', { token, form: fileForm('images', [png], fields) });
+    assert.equal(postRes.status, 201, JSON.stringify(postRes.body));
+    const postId = postRes.body._id;
+    // Update location trực tiếp qua API chỉnh sửa (PATCH /posts/:id) — set location có toạ độ.
+    const upd = await api('PATCH', `/posts/${postId}`, {
+      token,
+      form: fileForm('images', [png], { ...fields, location: JSON.stringify({ name: coords.name, lat: coords.lat, lng: coords.lng }) }),
+    });
+    assert.equal(upd.status, 200, JSON.stringify(upd.body));
+    return upd.body;
+  }
+
+  test('Không có bài có toạ độ → trả mảng rỗng (200)', async () => {
+    const author = await register('mapauthor1');
+    await makePost(author.token, { ...basePost, title: 'Map A1' }); // không có lat/lng
+    const r = await api('GET', `/users/${author.user.username}/map`);
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.body, []);
+  });
+
+  test('Có bài có toạ độ → trả các MapPoint với postId, title, name, lat, lng', async () => {
+    const author = await register('mapauthor2');
+    await makePost(author.token, { ...basePost, title: 'Map A2 no coord' });
+    await makePostWithCoords(author.token, { ...basePost, title: 'Map A2 Hội An' }, { name: 'Hội An', lat: 15.8801, lng: 108.338 });
+    await makePostWithCoords(author.token, { ...basePost, title: 'Map A2 Đà Lạt' }, { name: 'Đà Lạt', lat: 11.9404, lng: 108.4583 });
+
+    const r = await api('GET', `/users/${author.user.username}/map`);
+    assert.equal(r.status, 200);
+    assert.equal(r.body.length, 2);
+    for (const p of r.body) {
+      assert.ok(p.postId);
+      assert.ok(p.title);
+      assert.ok(typeof p.lat === 'number');
+      assert.ok(typeof p.lng === 'number');
+    }
+    // Sắp xếp theo tripDate giảm dần → bài "Đà Lạt" tạo sau nên đứng trước.
+    assert.equal(r.body[0].name, 'Đà Lạt');
+    assert.equal(r.body[1].name, 'Hội An');
+  });
+
+  test('Bài followers → khách không thấy; người theo dõi thấy; chủ bài thấy', async () => {
+    const author = await register('mapauthor3');
+    const follower = await register('mapfollower3');
+
+    const followRes = await api('POST', '/follows', { token: follower.token, json: { userId: author.user._id } });
+    assert.equal(followRes.status, 201);
+
+    await makePostWithCoords(author.token, { ...basePost, title: 'Map A3 public', visibility: 'public' }, { name: 'P', lat: 1, lng: 1 });
+    await makePostWithCoords(author.token, { ...basePost, title: 'Map A3 followers', visibility: 'followers' }, { name: 'F', lat: 2, lng: 2 });
+
+    // Khách: chỉ thấy public.
+    const guest = await api('GET', `/users/${author.user.username}/map`);
+    assert.equal(guest.status, 200);
+    assert.equal(guest.body.length, 1);
+    assert.equal(guest.body[0].title, 'Map A3 public');
+
+    // Người theo dõi: thấy cả 2.
+    const flw = await api('GET', `/users/${author.user.username}/map`, { token: follower.token });
+    assert.equal(flw.status, 200);
+    assert.equal(flw.body.length, 2);
+
+    // Chủ bài: thấy cả 2.
+    const self = await api('GET', `/users/${author.user.username}/map`, { token: author.token });
+    assert.equal(self.status, 200);
+    assert.equal(self.body.length, 2);
+  });
+
+  test('Người dùng không tồn tại → 404 NOT_FOUND', async () => {
+    const r = await api('GET', '/users/nonexistent_xyz/map');
+    assert.equal(r.status, 404);
+    assert.equal(r.body?.error?.code, 'NOT_FOUND');
+  });
+});
