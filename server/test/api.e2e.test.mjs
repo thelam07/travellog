@@ -1247,3 +1247,67 @@ describe('Admin xử lý báo cáo (C11 - F13, BR10, BR21)', () => {
   });
 });
 
+describe('Ẩn bình luận khi khoá tài khoản (C12 - BR09)', () => {
+  const samplePost = {
+    title: 'Bài viết có bình luận cần ẩn khi khoá',
+    content: 'Nội dung bài viết để kiểm tra ẩn bình luận khi tác giả bị khoá',
+    tripDate: '2026-10-03',
+    cost: 400000,
+    visibility: 'public',
+    location: JSON.stringify({ name: 'Nha Trang' }),
+  };
+
+  test('Khoá tài khoản thì bình luận ẩn với khách và thành viên, admin vẫn thấy; mở khoá thì hiện lại (BR09)', async () => {
+    const postAuthor = await register('c12postauth');
+    const commAuthor = await register('c12commauth');
+    const stranger = await register('c12stranger');
+    const post = await makePost(postAuthor.token, samplePost);
+
+    const rootComment = await api('POST', `/posts/${post._id}/comments`, {
+      token: commAuthor.token,
+      json: { content: 'Bình luận gốc sẽ bị ẩn khi tác giả bị khoá' },
+    });
+    assert.equal(rootComment.status, 201);
+
+    const replyComment = await api('POST', `/posts/${post._id}/comments`, {
+      token: commAuthor.token,
+      json: { content: 'Câu trả lời sẽ bị ẩn khi tác giả bị khoá', parentId: rootComment.body._id },
+    });
+    assert.equal(replyComment.status, 201);
+
+    const guestGet1 = await api('GET', `/posts/${post._id}/comments`);
+    assert.equal(guestGet1.status, 200);
+    assert.equal(guestGet1.body.items.length, 1);
+    assert.equal(guestGet1.body.items[0].replies.length, 1);
+
+    const lockRes = await api('PATCH', `/admin/users/${commAuthor.user._id}`, {
+      token: admin,
+      json: { isLocked: true },
+    });
+    assert.equal(lockRes.status, 200);
+
+    const guestGetLocked = await api('GET', `/posts/${post._id}/comments`);
+    assert.equal(guestGetLocked.status, 200);
+    assert.equal(guestGetLocked.body.items.length, 0);
+
+    const memberGetLocked = await api('GET', `/posts/${post._id}/comments`, { token: stranger.token });
+    assert.equal(memberGetLocked.status, 200);
+    assert.equal(memberGetLocked.body.items.length, 0);
+
+    const adminGetLocked = await api('GET', `/posts/${post._id}/comments`, { token: admin });
+    assert.equal(adminGetLocked.status, 200);
+    assert.equal(adminGetLocked.body.items.length, 1);
+    assert.equal(adminGetLocked.body.items[0].replies.length, 1);
+
+    const unlockRes = await api('PATCH', `/admin/users/${commAuthor.user._id}`, {
+      token: admin,
+      json: { isLocked: false },
+    });
+    assert.equal(unlockRes.status, 200);
+
+    const guestGetUnlocked = await api('GET', `/posts/${post._id}/comments`);
+    assert.equal(guestGetUnlocked.status, 200);
+    assert.equal(guestGetUnlocked.body.items.length, 1);
+    assert.equal(guestGetUnlocked.body.items[0].replies.length, 1);
+  });
+});
