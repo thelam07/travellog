@@ -1429,3 +1429,70 @@ describe('Bản đồ trang cá nhân (B14, N01)', () => {
     assert.equal(r.body?.error?.code, 'NOT_FOUND');
   });
 });
+
+describe('Thống kê địa điểm (C13 - F15)', () => {
+  test('Khách gọi 401, thành viên gọi 403', async () => {
+    const guest = await api('GET', '/stats/locations');
+    assert.equal(guest.status, 401);
+
+    const member = await register('statsmem');
+    const memRes = await api('GET', '/stats/locations', { token: member.token });
+    assert.equal(memRes.status, 403);
+  });
+
+  test('Top địa điểm đúng thứ tự, gộp Hội An và hoi an khi không có placeId', async () => {
+    const author = await register('statsauthor');
+
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Hội An 1',
+      location: { name: 'hoi an' },
+    });
+
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Hội An 2',
+      location: { name: 'Hội An' },
+    });
+
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Đà Nẵng 1',
+      location: { name: 'Đà Nẵng', placeId: 'place_danang' },
+    });
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Đà Nẵng 2',
+      location: { name: 'Đà Nẵng', placeId: 'place_danang' },
+    });
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Đà Nẵng 3',
+      location: { name: 'Đà Nẵng', placeId: 'place_danang' },
+    });
+
+    const res = await api('GET', '/stats/locations', { token: admin });
+    assert.equal(res.status, 200);
+    assert.ok(Array.isArray(res.body));
+
+    const daNang = res.body.find((it) => it._id === 'place_danang');
+    assert.ok(daNang);
+    assert.equal(daNang.count, 3);
+    assert.equal(daNang.name, 'Đà Nẵng');
+
+    const hoiAn = res.body.find((it) => it._id === 'hoi an');
+    assert.ok(hoiAn);
+    assert.equal(hoiAn.count, 2);
+    assert.equal(hoiAn.name, 'Hội An');
+
+    const daNangIndex = res.body.findIndex((it) => it._id === 'place_danang');
+    const hoiAnIndex = res.body.findIndex((it) => it._id === 'hoi an');
+    assert.ok(daNangIndex < hoiAnIndex);
+  });
+
+  test('limit tham số hoạt động đúng', async () => {
+    const r = await api('GET', '/stats/locations?limit=1', { token: admin });
+    assert.equal(r.status, 200);
+    assert.equal(r.body.length, 1);
+  });
+});
