@@ -19,6 +19,7 @@ import NotificationsPage from './pages/NotificationsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import PostDetailPage from './pages/PostDetailPage';
 import PostFormPage from './pages/PostFormPage';
+import ExplorePage from './pages/ExplorePage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/RegisterPage';
 
@@ -44,7 +45,7 @@ export const router = createBrowserRouter([
         element: <MainLayout />,
         children: [
           { index: true, element: <HomeRoute feed={<FeedPage />} /> },
-          { path: 'explore', element: <PlaceholderPage title="Khám phá" /> }, // B
+          { path: 'explore', element: <ExplorePage /> },
           { path: 'u/:username', element: <ProfilePage /> },
           { path: 'notifications', element: <RequireRole role="member"><NotificationsPage /></RequireRole> },
           { path: 'settings/profile', element: <RequireRole role="member"><EditProfilePage /></RequireRole> },
