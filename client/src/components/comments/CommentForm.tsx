@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { parseError } from '../../api/client';
 import { postsApi } from '../../api/posts';
+import { Avatar } from '../Avatar';
 import { Button } from '../Button';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Comment } from '../../types';
@@ -65,7 +66,9 @@ export function CommentForm({
   };
 
   return (
-    <form className="comment-form stack" onSubmit={handleSubmit}>
+    <form className="comment-form" onSubmit={handleSubmit}>
+      {/* (A) Giống bản mẫu: avatar người viết đứng cạnh ô bình luận */}
+      <Avatar user={user} size="sm" />
       <div className="comment-input-wrapper">
         <textarea
           className="comment-textarea"
@@ -88,12 +91,12 @@ export function CommentForm({
               </Button>
             )}
             <Button type="submit" variant="primary" size="sm" disabled={isSubmitDisabled} isLoading={loading}>
-              Gửi
+              {parentId ? 'Trả lời' : 'Gửi'}
             </Button>
           </div>
         </div>
+        {error && <p className="field-error comment-error">{error}</p>}
       </div>
-      {error && <p className="field-error comment-error">{error}</p>}
     </form>
   );
 }

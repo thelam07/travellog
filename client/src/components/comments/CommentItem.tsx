@@ -53,23 +53,24 @@ export function CommentItem({
 
   return (
     <div className={`comment-item ${isReply ? 'comment-reply-item' : 'comment-root-item'}`}>
+      {/* (A) Giống bản mẫu: bong bóng chứa tên + nội dung; thời gian · Trả lời · Xoá nằm dưới bong bóng */}
       <div className="comment-main">
         <Link to={`/u/${comment.author.username}`} className="comment-avatar-link">
           <Avatar user={comment.author} size="sm" />
         </Link>
-        <div className="comment-body stack">
-          <div className="comment-meta">
+        <div className="comment-body">
+          <div className="comment-bubble">
             <Link to={`/u/${comment.author.username}`} className="comment-author-name">
               {comment.author.displayName || comment.author.username}
             </Link>
-            <span className="muted small comment-time">{timeAgo(comment.createdAt)}</span>
+            <div className="comment-content">{comment.content}</div>
           </div>
-          <div className="comment-content">{comment.content}</div>
           <div className="comment-actions">
+            <span className="comment-time">{timeAgo(comment.createdAt)}</span>
             {canReply && (
               <button
                 type="button"
-                className="btn-link comment-action-btn"
+                className="btn-link comment-action-btn reply-btn"
                 onClick={() => setIsReplying((prev) => !prev)}
               >
                 Trả lời
@@ -87,40 +88,40 @@ export function CommentItem({
             )}
           </div>
           {deleteError && <p className="field-error comment-error">{deleteError}</p>}
+
+          {isReplying && (
+            <div className="comment-reply-form-wrapper">
+              <CommentForm
+                postId={postId}
+                parentId={comment.parent ?? comment._id}
+                placeholder={`Trả lời ${comment.author.displayName || comment.author.username}...`}
+                autoFocus
+                onCancel={() => setIsReplying(false)}
+                onSuccess={(reply) => {
+                  setIsReplying(false);
+                  onReplySuccess(reply);
+                }}
+              />
+            </div>
+          )}
+
+          {!isReply && comment.replies && comment.replies.length > 0 && (
+            <div className="comment-replies-list">
+              {comment.replies.map((reply) => (
+                <CommentItem
+                  key={reply._id}
+                  comment={reply}
+                  postId={postId}
+                  postAuthorId={postAuthorId}
+                  isReply={true}
+                  onReplySuccess={onReplySuccess}
+                  onDeleteSuccess={onDeleteSuccess}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
-
-      {isReplying && (
-        <div className="comment-reply-form-wrapper">
-          <CommentForm
-            postId={postId}
-            parentId={comment.parent ?? comment._id}
-            placeholder={`Trả lời ${comment.author.displayName || comment.author.username}...`}
-            autoFocus
-            onCancel={() => setIsReplying(false)}
-            onSuccess={(reply) => {
-              setIsReplying(false);
-              onReplySuccess(reply);
-            }}
-          />
-        </div>
-      )}
-
-      {!isReply && comment.replies && comment.replies.length > 0 && (
-        <div className="comment-replies-list stack">
-          {comment.replies.map((reply) => (
-            <CommentItem
-              key={reply._id}
-              comment={reply}
-              postId={postId}
-              postAuthorId={postAuthorId}
-              isReply={true}
-              onReplySuccess={onReplySuccess}
-              onDeleteSuccess={onDeleteSuccess}
-            />
-          ))}
-        </div>
-      )}
 
       <ConfirmDialog
         open={confirmOpen}
