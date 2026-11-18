@@ -124,7 +124,9 @@ h1, h2, h3 { line-height: 1.25; margin: 0 0 12px; }
 .admin-main { padding: 20px; min-width: 0; }
 
 @media (max-width: 720px) {
-  .admin { grid-template-columns: minmax(0, 1fr); }
+  /* Điện thoại: menu thành thanh ngang ở trên. Hàng 1 cao vừa nội dung, hàng 2 (nội dung trang) nhận phần còn lại;
+     không đặt thì lưới chia đều chiều cao màn hình, trang ít nội dung sẽ có khoảng trắng lớn dưới menu. */
+  .admin { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
   .admin-side { border-right: 0; border-bottom: 1px solid var(--border); min-width: 0; }
   .admin-nav { flex-direction: row; flex-wrap: wrap; }
 }
