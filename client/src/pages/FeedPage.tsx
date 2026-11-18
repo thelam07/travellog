@@ -41,6 +41,8 @@ export function FeedPage() {
     void loadSuggestions();
   }, [loadFirst, loadSuggestions]);
 
+  // Đang ở bảng tin mà bấm logo hoặc "Bảng tin": React Router tạo location.key mới (cùng đường dẫn "/")
+  // nên trang không mount lại. Bắt thay đổi đó để cuộn lên đầu và tải lại trang đầu, thấy bài mới.
   const location = useLocation();
   const lastKey = useRef(location.key);
   useEffect(() => {

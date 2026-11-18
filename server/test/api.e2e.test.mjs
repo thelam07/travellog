@@ -1537,7 +1537,7 @@ describe('Gợi ý người nên theo dõi (C14 - N02)', () => {
       title: 'Bài viết của writer vừa theo dõi',
     });
 
-    const feedBefore = await api('GET', '/posts/feed', { token: reader.token });
+    const feedBefore = await api('GET', '/feed', { token: reader.token });
     assert.equal(feedBefore.status, 200);
     const hasPostBefore = feedBefore.body.items.some((p) => p.author._id === writer.user._id);
     assert.equal(hasPostBefore, false);
@@ -1545,7 +1545,7 @@ describe('Gợi ý người nên theo dõi (C14 - N02)', () => {
     const followRes = await api('POST', '/follows', { token: reader.token, json: { userId: writer.user._id } });
     assert.equal(followRes.status, 201);
 
-    const feedAfter = await api('GET', '/posts/feed', { token: reader.token });
+    const feedAfter = await api('GET', '/feed', { token: reader.token });
     assert.equal(feedAfter.status, 200);
     const hasPostAfter = feedAfter.body.items.some((p) => p.author._id === writer.user._id);
     assert.equal(hasPostAfter, true);
