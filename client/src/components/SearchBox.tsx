@@ -2,7 +2,7 @@
 // Ô tìm kiếm trên header: gõ xong 400ms thì chuyển tới /explore?q=...
 // Dùng chung (header + có thể tái sử dụng ở trang Khám phá).
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useDebounce } from '../hooks/useDebounce';
 
@@ -26,27 +26,34 @@ export function SearchBox({
   const location = useLocation();
   const [value, setValue] = useState(initialValue);
   const debounced = useDebounce(value, 400);
+  // Lưu giá trị debounced lần trước để biết khi nào nó thật sự đổi.
+  const lastDebouncedRef = useRef(debounced);
+  // Lưu giá trị initialValue lần trước để đồng bộ value khi URL đổi (bấm Back).
+  const lastInitialRef = useRef(initialValue);
 
   // Đồng bộ value khi URL đổi (vd: bấm nút back).
   useEffect(() => {
+    if (initialValue === lastInitialRef.current) return;
+    lastInitialRef.current = initialValue;
     setValue(initialValue);
   }, [initialValue]);
 
   // Tự chuyển trang sau khi ngừng gõ.
+  // Chỉ chạy khi debounced thật sự đổi (dùng ref để so sánh), và chỉ khi user đã ngừng gõ (debounced === value).
+  // Bỏ location.search khỏi deps để effect không chạy lại khi chính nó vừa navigate.
   useEffect(() => {
     if (!autoNavigate) return;
-    const q = debounced.trim();
-    // Chỉ chuyển khi đang ở /explore (hoặc đã ở `to`) — tránh spam điều hướng từ trang khác.
+    if (debounced === lastDebouncedRef.current) return;
+    lastDebouncedRef.current = debounced;
+    if (debounced !== value) return; // còn đang gõ, chờ
+    // Chỉ chuyển khi đang ở trang tìm kiếm — tránh spam điều hướng từ trang khác.
     if (!location.pathname.startsWith(to)) return;
-    const params = new URLSearchParams(location.search);
+    const q = debounced.trim();
+    const params = new URLSearchParams();
     if (q) params.set('q', q);
-    else params.delete('q');
     const search = params.toString();
-    const next = `${to}${search ? `?${search}` : ''}`;
-    if (next !== `${location.pathname}${location.search}`) {
-      navigate(next, { replace: true });
-    }
-  }, [debounced, autoNavigate, to, location.pathname, location.search, navigate]);
+    navigate(`${to}${search ? `?${search}` : ''}`, { replace: true });
+  }, [debounced, autoNavigate, to, value, location.pathname, navigate]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
