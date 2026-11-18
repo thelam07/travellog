@@ -93,6 +93,7 @@ export function SearchBox({
 
   return (
     <form ref={formRef} className="search-box" onSubmit={submit} role="search">
+      <span className="search-box-icon" aria-hidden="true">🔍</span>
       <input
         type="search"
         value={value}
