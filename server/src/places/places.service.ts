@@ -1,4 +1,4 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, BadGatewayException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 // B12 (mục 10.1): Google Places — chỉ server giữ API key (GOOGLE_PLACES_KEY).
@@ -30,8 +30,9 @@ export class PlacesService {
   }
 
   // Lỗi đồng nhất cho mọi nhánh fail (không có key, timeout, Google 4xx/5xx, body không hợp lệ).
+  // Dùng BadGatewayException (502) để khớp api-contract: server chỉ làm cầu nối, Google mới là nguồn gốc.
   private fail(): never {
-    throw new ServiceUnavailableException({
+    throw new BadGatewayException({
       code: 'PLACES_UNAVAILABLE',
       message: 'Chưa gợi ý được địa điểm, bạn vẫn có thể nhập tay.',
     });

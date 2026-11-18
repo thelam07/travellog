@@ -64,6 +64,8 @@ export function PlaceInput({
   const lastPickedNameRef = useRef<string>(value.name ?? '');
   // Bỏ qua useEffect 1 lần sau khi chọn gợi ý (chữ vừa set = tên đã chọn, không trigger gọi).
   const suppressNextRef = useRef(false);
+  // Chặn gọi API lần đầu khi form có sẵn giá trị (vd: sửa bài đã có location).
+  const userTypedRef = useRef<boolean>(false);
 
   const debounced = useDebounce(query.trim(), 400);
 
@@ -83,6 +85,8 @@ export function PlaceInput({
       suppressNextRef.current = false;
       return;
     }
+    // Bỏ qua lần đầu khi form đã có giá trị sẵn — chỉ gọi khi user thật sự gõ.
+    if (!userTypedRef.current) return;
     if (debounced.length < 2) {
       setSuggestions([]);
       setOpen(false);
@@ -183,6 +187,7 @@ export function PlaceInput({
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
+          userTypedRef.current = true; // đánh dấu đã gõ tay → cho phép gọi autocomplete
           // Báo parent ngay để đồng bộ text ngay cả khi chưa gọi API.
           onChange({ name: e.target.value });
         }}
