@@ -1429,3 +1429,51 @@ describe('Bản đồ trang cá nhân (B14, N01)', () => {
     assert.equal(r.body?.error?.code, 'NOT_FOUND');
   });
 });
+
+describe('Thông báo trả lời bình luận (A – mở rộng của BR08)', () => {
+  const types = async (user) => (await api('GET', '/notifications', { token: user.token })).body.items.map((n) => n.type);
+
+  test('Người khác trả lời bình luận của mình → nhận 1 thông báo "reply"; chủ bài nhận "comment"', async () => {
+    const owner = await register('rpowner1');
+    const b = await register('rpb1');
+    const c = await register('rpc1');
+    const post = await makePost(owner.token, basePost);
+    const root = await api('POST', `/posts/${post._id}/comments`, { token: b.token, json: { content: 'Bình luận của B' } });
+    await api('POST', `/posts/${post._id}/comments`, { token: c.token, json: { content: 'C trả lời B', parentId: root.body._id } });
+    assert.deepEqual(await types(b), ['reply']);
+    assert.deepEqual((await types(owner)).sort(), ['comment', 'comment']);
+  });
+
+  test('Chủ bài trả lời bình luận → người bình luận nhận "reply", chủ bài không tự nhận', async () => {
+    const owner = await register('rpowner2');
+    const b = await register('rpb2');
+    const post = await makePost(owner.token, basePost);
+    const root = await api('POST', `/posts/${post._id}/comments`, { token: b.token, json: { content: 'Hỏi chủ bài' } });
+    await api('POST', `/posts/${post._id}/comments`, { token: owner.token, json: { content: 'Chủ bài trả lời', parentId: root.body._id } });
+    assert.deepEqual(await types(b), ['reply']);
+    assert.deepEqual(await types(owner), ['comment']);
+  });
+
+  test('Trả lời bình luận của chính chủ bài → chủ bài chỉ nhận 1 thông báo (không trùng comment + reply)', async () => {
+    const owner = await register('rpowner3');
+    const b = await register('rpb3');
+    const post = await makePost(owner.token, basePost);
+    const root = await api('POST', `/posts/${post._id}/comments`, { token: owner.token, json: { content: 'Chủ bài tự bình luận' } });
+    await api('POST', `/posts/${post._id}/comments`, { token: b.token, json: { content: 'B trả lời chủ bài', parentId: root.body._id } });
+    assert.deepEqual(await types(owner), ['comment']);
+  });
+
+  test('Trả lời một câu trả lời → người viết câu trả lời đó nhận "reply"; tự trả lời mình thì không', async () => {
+    const owner = await register('rpowner4');
+    const b = await register('rpb4');
+    const d = await register('rpd4');
+    const post = await makePost(owner.token, basePost);
+    const root = await api('POST', `/posts/${post._id}/comments`, { token: b.token, json: { content: 'Gốc của B' } });
+    const dReply = await api('POST', `/posts/${post._id}/comments`, { token: d.token, json: { content: 'D trả lời', parentId: root.body._id } });
+    await api('POST', `/posts/${post._id}/comments`, { token: b.token, json: { content: 'B trả lời D', parentId: dReply.body._id } });
+    assert.deepEqual(await types(d), ['reply']);
+    assert.deepEqual(await types(b), ['reply']);
+    await api('POST', `/posts/${post._id}/comments`, { token: d.token, json: { content: 'D tự trả lời mình', parentId: dReply.body._id } });
+    assert.deepEqual(await types(d), ['reply']);
+  });
+});

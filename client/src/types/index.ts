@@ -4,7 +4,7 @@
 export type Role = 'member' | 'admin';
 export type Visibility = 'public' | 'followers';
 export type PostStatus = 'active' | 'hidden';
-export type NotificationType = 'like' | 'comment' | 'follow';
+export type NotificationType = 'like' | 'comment' | 'follow' | 'reply';
 export type ReportReason = 'spam' | 'offensive' | 'false_info' | 'other';
 export type ReportStatus = 'pending' | 'resolved' | 'rejected';
 
