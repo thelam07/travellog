@@ -1550,5 +1550,3 @@ describe('Thống kê địa điểm (C13 - F15)', () => {
     assert.equal(r.body.length, 1);
   });
 });
-  });
-});
