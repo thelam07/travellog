@@ -1063,6 +1063,8 @@ body.no-scroll { overflow: hidden; }
 .profile-map { width: 100%; }
 .profile-map-popup { display: flex; flex-direction: column; gap: 6px; min-width: 160px; }
 .profile-map-popup-title { font-weight: 600; }
+/* Nút "Mở bài" trong popup: .leaflet-container a mặc định màu xanh dương → đè lại. */
+.profile-map-popup .btn { color: #fff; }
 .post-image-btn { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; position: relative; }
 
 /* ===== (A) Bình luận kiểu bản mẫu: avatar cạnh ô viết, bong bóng, hàng thời gian · Trả lời · Xoá ===== */

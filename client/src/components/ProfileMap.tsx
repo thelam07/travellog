@@ -5,6 +5,7 @@
 // - Tự căn khung theo các ghim (fitBounds); bấm ghim hiện popup có link tới bài.
 // - Người không có bài có toạ độ → EmptyState.
 
+import 'leaflet/dist/leaflet.css';
 import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router';
 import L from 'leaflet';

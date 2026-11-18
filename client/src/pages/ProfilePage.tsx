@@ -1,9 +1,10 @@
 // client/src/pages/ProfilePage.tsx
 // F04. Header trang cá nhân + 2 tab: "Bài viết" (ProfilePosts) và "Bản đồ" (ProfileMap, B14 / N01).
-// ProfileMap tải lười bằng React.lazy vì Leaflet khá nặng.
+// ProfileMap tải lười bằng React.lazy vì Leaflet khá nặng; chỉ render khi đang ở tab Bản đồ
+// để tránh kéo theo CSS + JS của Leaflet khi user chỉ xem Bài viết.
 
-import { lazy, Suspense, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { usersApi } from '../api/users';
 import { parseError } from '../api/client';
 import FollowButton from '../components/FollowButton';
@@ -14,20 +15,25 @@ import UserInitial from '../components/UserInitial';
 import { useAuth } from '../contexts/AuthContext';
 import type { MapPoint, Profile } from '../types';
 
-// Tải lười + import CSS ngay tại đây (chỉ gửi đến client khi mở tab Bản đồ).
-// Lazy component nhận points/loading/error từ parent — parent vẫn gọi API và quản lý state.
 const ProfileMap = lazy(() => import('../components/ProfileMap'));
 
 type Tab = 'posts' | 'map';
 
+// Đọc tab từ URL ?tab=map (mặc định 'posts'). Refresh / Back giữ nguyên tab đang xem.
+function readTab(sp: URLSearchParams): Tab {
+  return sp.get('tab') === 'map' ? 'map' : 'posts';
+}
+
 export default function ProfilePage() {
   const { username = '' } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = readTab(searchParams);
+
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [list, setList] = useState<'followers' | 'following' | null>(null);
   const [viewAvatar, setViewAvatar] = useState(false);
-  const [tab, setTab] = useState<Tab>('posts');
 
   // State riêng cho bản đồ — chỉ tải khi mở tab để tránh gọi API khi không cần.
   const [points, setPoints] = useState<MapPoint[]>([]);
@@ -41,7 +47,6 @@ export default function ProfilePage() {
     setError(null);
     setList(null);
     setViewAvatar(false);
-    setTab('posts');
     // Reset bản đồ khi đổi username.
     setPoints([]);
     setMapError(null);
@@ -75,10 +80,20 @@ export default function ProfilePage() {
     };
   }, [tab, profile, mapLoaded]);
 
+  // Cập nhật URL khi đổi tab (replace để khỏi dồn lịch sử Back).
+  const switchTab = (next: Tab) => {
+    if (next === tab) return;
+    const sp = new URLSearchParams(searchParams);
+    if (next === 'posts') sp.delete('tab');
+    else sp.set('tab', 'map');
+    setSearchParams(sp, { replace: true });
+  };
+
+  const isSelf = useMemo(() => user?._id === profile?._id, [user, profile]);
+
   if (error) return <div className="alert alert-error">{error}</div>;
   if (!profile) return <div className="page-loading">Đang tải…</div>;
 
-  const isSelf = user?._id === profile._id;
   // Theo dõi / bỏ theo dõi xong thì cập nhật số người theo dõi ngay, không cần tải lại trang
   const onFollowChange = (following: boolean) =>
     setProfile((p) => p && { ...p, isFollowing: following, followerCount: p.followerCount + (following ? 1 : -1) });
@@ -141,14 +156,14 @@ export default function ProfilePage() {
       )}
       {list && <FollowListDialog username={profile.username} kind={list} onClose={() => setList(null)} />}
 
-      {/* B14: 2 tab — Bài viết / Bản đồ. */}
+      {/* B14: 2 tab — Bài viết / Bản đồ. Render có điều kiện: tránh .profile-posts { display: flex } đè hidden, và chỉ mount ProfileMap khi đang ở tab Bản đồ. */}
       <div className="profile-tabs" role="tablist">
         <button
           type="button"
           role="tab"
           aria-selected={tab === 'posts'}
           className={`profile-tab ${tab === 'posts' ? 'is-active' : ''}`}
-          onClick={() => setTab('posts')}
+          onClick={() => switchTab('posts')}
         >
           Bài viết
         </button>
@@ -157,21 +172,25 @@ export default function ProfilePage() {
           role="tab"
           aria-selected={tab === 'map'}
           className={`profile-tab ${tab === 'map' ? 'is-active' : ''}`}
-          onClick={() => setTab('map')}
+          onClick={() => switchTab('map')}
         >
           Bản đồ
         </button>
       </div>
 
-      <section className="profile-posts" aria-label="Bài viết" hidden={tab !== 'posts'}>
-        <ProfilePosts key={profile.username} username={profile.username} isSelf={isSelf} />
-      </section>
+      {tab === 'posts' && (
+        <section className="profile-posts" aria-label="Bài viết">
+          <ProfilePosts key={profile.username} username={profile.username} isSelf={isSelf} />
+        </section>
+      )}
 
-      <section className="profile-map-section" aria-label="Bản đồ" hidden={tab !== 'map'}>
-        <Suspense fallback={<div className="page-loading">Đang tải bản đồ…</div>}>
-          <ProfileMap points={points} loading={mapLoading} error={mapError} />
-        </Suspense>
-      </section>
+      {tab === 'map' && (
+        <section className="profile-map-section" aria-label="Bản đồ">
+          <Suspense fallback={<div className="page-loading">Đang tải bản đồ…</div>}>
+            <ProfileMap points={points} loading={mapLoading} error={mapError} />
+          </Suspense>
+        </section>
+      )}
     </div>
   );
 }
