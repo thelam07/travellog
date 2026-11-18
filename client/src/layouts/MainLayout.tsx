@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router';
 import BottomNav from '../components/BottomNav';
 import NotificationBell from '../components/NotificationBell';
+import SearchBox from '../components/SearchBox';
 import ThemeToggle from '../components/ThemeToggle';
 import UserMenu from '../components/UserMenu';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,6 +15,10 @@ export default function MainLayout() {
       <header className="header">
         <div className="container header-inner">
           <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true">✈</span>TravelLog</Link>
+          <div className="desktop-only header-search">
+            {/* B11: ô tìm kiếm — gõ xong 400ms tự chuyển tới /explore?q=... */}
+            <SearchBox />
+          </div>
           <nav className="nav">
             {user && <NavLink to="/" end className="desktop-only">Bảng tin</NavLink>}
             <NavLink to="/explore" className="desktop-only">Khám phá</NavLink>

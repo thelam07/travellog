@@ -83,6 +83,19 @@ export const postsApi = {
     return res.data;
   },
 
+  /** Tìm kiếm bài (B10, mục 5.2). Server: GET /api/posts?q=...&tag=...&minCost=...&maxCost=...&cursor=... */
+  search: async (params: {
+    q?: string;
+    tag?: string;
+    author?: string;
+    minCost?: number;
+    maxCost?: number;
+    cursor?: string | null;
+  }): Promise<CursorPage<Post>> => {
+    const res = await api.get<CursorPage<Post>>('/posts', { params });
+    return res.data;
+  },
+
   getComments: async (postId: string, cursor?: string | null): Promise<CursorPage<Comment>> => {
     const params: Record<string, unknown> = {};
     if (cursor) params.cursor = cursor;
