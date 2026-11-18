@@ -14,7 +14,7 @@ export interface PostCardProps {
 export function PostCard({ post }: PostCardProps) {
   // (A – mở rộng) Ảnh dạng lưới; bấm ảnh mở trình xem có cột bình luận, bình luận trong đó cập nhật số 💬
   const [commentCount, setCommentCount] = useState(post.commentCount);
-  const visibilityIcon = post.visibility === 'public' ? '🌍' : '🔒';
+  const visibilityText = post.visibility === 'public' ? '🌐 Công khai' : '👥 Người theo dõi';
   
   const previewContent = post.content.length > 150 
     ? post.content.substring(0, 150) + '...' 
@@ -35,10 +35,8 @@ export function PostCard({ post }: PostCardProps) {
           </div>
           <div className="muted small post-meta">
             <span>{timeAgo(post.createdAt)}</span>
-            <span>•</span>
-            <span title={post.visibility === 'public' ? 'Công khai' : 'Người theo dõi'}>
-              {visibilityIcon}
-            </span>
+            <span>·</span>
+            <span>{visibilityText}</span>
           </div>
         </div>
       </div>
