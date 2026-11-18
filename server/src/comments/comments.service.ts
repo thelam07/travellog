@@ -94,6 +94,7 @@ export class CommentsService {
 
   async createComment(post: PostDocument, user: AuthUser, dto: CreateCommentDto) {
     let resolvedParent: Types.ObjectId | null = null;
+    let repliedTo: CommentDocument | null = null;
     if (dto.parentId) {
       if (!isValidObjectId(dto.parentId)) {
         throw new NotFoundException({ code: 'NOT_FOUND', message: 'Không tìm thấy bình luận cha' });
@@ -103,6 +104,7 @@ export class CommentsService {
         throw new NotFoundException({ code: 'NOT_FOUND', message: 'Không tìm thấy bình luận cha' });
       }
       resolvedParent = parent.parent ? parent.parent : parent._id;
+      repliedTo = parent;
     }
 
     const comment = await this.commentModel.create({
@@ -120,6 +122,18 @@ export class CommentsService {
       type: 'comment',
       post: String(post._id),
     });
+
+    // (A – mở rộng) Trả lời bình luận → báo cho người viết bình luận được trả lời.
+    // Bỏ qua nếu người đó là chủ bài (đã nhận thông báo 'comment' ở trên, tránh 2 thông báo);
+    // tự trả lời mình thì notify() tự bỏ qua.
+    if (repliedTo && String(repliedTo.author) !== String(post.author)) {
+      await this.notifications.notify({
+        recipient: String(repliedTo.author),
+        actor: user.id,
+        type: 'reply',
+        post: String(post._id),
+      });
+    }
 
     const populated = await this.commentModel
       .findById(comment._id)

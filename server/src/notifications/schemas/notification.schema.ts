@@ -1,13 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { SchemaTypes, Types } from 'mongoose';
 
-export type NotificationType = 'like' | 'comment' | 'follow';
+// 'reply' (mở rộng): có người trả lời bình luận của mình
+export type NotificationType = 'like' | 'comment' | 'follow' | 'reply';
 
 @Schema({ timestamps: true, versionKey: false })
 export class Notification {
   @Prop({ type: SchemaTypes.ObjectId, ref: 'User', required: true }) recipient: Types.ObjectId;
   @Prop({ type: SchemaTypes.ObjectId, ref: 'User', required: true }) actor: Types.ObjectId;
-  @Prop({ type: String, enum: ['like', 'comment', 'follow'], required: true }) type: NotificationType;
+  @Prop({ type: String, enum: ['like', 'comment', 'follow', 'reply'], required: true }) type: NotificationType;
   @Prop({ type: SchemaTypes.ObjectId, ref: 'Post', default: null }) post: Types.ObjectId | null;
   @Prop({ type: Boolean, default: false }) isRead: boolean;
   createdAt: Date;

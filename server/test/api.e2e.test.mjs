@@ -1430,6 +1430,54 @@ describe('Bản đồ trang cá nhân (B14, N01)', () => {
   });
 });
 
+describe('Thông báo trả lời bình luận (A – mở rộng của BR08)', () => {
+  const types = async (user) => (await api('GET', '/notifications', { token: user.token })).body.items.map((n) => n.type);
+
+  test('Người khác trả lời bình luận của mình → nhận 1 thông báo "reply"; chủ bài nhận "comment"', async () => {
+    const owner = await register('rpowner1');
+    const b = await register('rpb1');
+    const c = await register('rpc1');
+    const post = await makePost(owner.token, basePost);
+    const root = await api('POST', `/posts/${post._id}/comments`, { token: b.token, json: { content: 'Bình luận của B' } });
+    await api('POST', `/posts/${post._id}/comments`, { token: c.token, json: { content: 'C trả lời B', parentId: root.body._id } });
+    assert.deepEqual(await types(b), ['reply']);
+    assert.deepEqual((await types(owner)).sort(), ['comment', 'comment']);
+  });
+
+  test('Chủ bài trả lời bình luận → người bình luận nhận "reply", chủ bài không tự nhận', async () => {
+    const owner = await register('rpowner2');
+    const b = await register('rpb2');
+    const post = await makePost(owner.token, basePost);
+    const root = await api('POST', `/posts/${post._id}/comments`, { token: b.token, json: { content: 'Hỏi chủ bài' } });
+    await api('POST', `/posts/${post._id}/comments`, { token: owner.token, json: { content: 'Chủ bài trả lời', parentId: root.body._id } });
+    assert.deepEqual(await types(b), ['reply']);
+    assert.deepEqual(await types(owner), ['comment']);
+  });
+
+  test('Trả lời bình luận của chính chủ bài → chủ bài chỉ nhận 1 thông báo (không trùng comment + reply)', async () => {
+    const owner = await register('rpowner3');
+    const b = await register('rpb3');
+    const post = await makePost(owner.token, basePost);
+    const root = await api('POST', `/posts/${post._id}/comments`, { token: owner.token, json: { content: 'Chủ bài tự bình luận' } });
+    await api('POST', `/posts/${post._id}/comments`, { token: b.token, json: { content: 'B trả lời chủ bài', parentId: root.body._id } });
+    assert.deepEqual(await types(owner), ['comment']);
+  });
+
+  test('Trả lời một câu trả lời → người viết câu trả lời đó nhận "reply"; tự trả lời mình thì không', async () => {
+    const owner = await register('rpowner4');
+    const b = await register('rpb4');
+    const d = await register('rpd4');
+    const post = await makePost(owner.token, basePost);
+    const root = await api('POST', `/posts/${post._id}/comments`, { token: b.token, json: { content: 'Gốc của B' } });
+    const dReply = await api('POST', `/posts/${post._id}/comments`, { token: d.token, json: { content: 'D trả lời', parentId: root.body._id } });
+    await api('POST', `/posts/${post._id}/comments`, { token: b.token, json: { content: 'B trả lời D', parentId: dReply.body._id } });
+    assert.deepEqual(await types(d), ['reply']);
+    assert.deepEqual(await types(b), ['reply']);
+    await api('POST', `/posts/${post._id}/comments`, { token: d.token, json: { content: 'D tự trả lời mình', parentId: dReply.body._id } });
+    assert.deepEqual(await types(d), ['reply']);
+  });
+});
+
 describe('Thống kê địa điểm (C13 - F15)', () => {
   test('Khách gọi 401, thành viên gọi 403', async () => {
     const guest = await api('GET', '/stats/locations');
@@ -1442,51 +1490,57 @@ describe('Thống kê địa điểm (C13 - F15)', () => {
 
   test('Top địa điểm đúng thứ tự, gộp Hội An và hoi an khi không có placeId', async () => {
     const author = await register('statsauthor');
+    const suffix = Date.now();
+    const nameHoiAn = `Hội An ${suffix}`;
+    const nameHoiAnLower = `hoi an ${suffix}`;
+    const nameDanang = `Đà Nẵng ${suffix}`;
+    const placeIdDanang = `place_danang_${suffix}`;
 
     await makePost(author.token, {
       ...basePost,
       title: 'Bài Hội An 1',
-      location: { name: 'hoi an' },
+      location: { name: nameHoiAnLower },
     });
 
     await makePost(author.token, {
       ...basePost,
       title: 'Bài Hội An 2',
-      location: { name: 'Hội An' },
+      location: { name: nameHoiAn },
     });
 
     await makePost(author.token, {
       ...basePost,
       title: 'Bài Đà Nẵng 1',
-      location: { name: 'Đà Nẵng', placeId: 'place_danang' },
+      location: { name: nameDanang, placeId: placeIdDanang },
     });
     await makePost(author.token, {
       ...basePost,
       title: 'Bài Đà Nẵng 2',
-      location: { name: 'Đà Nẵng', placeId: 'place_danang' },
+      location: { name: nameDanang, placeId: placeIdDanang },
     });
     await makePost(author.token, {
       ...basePost,
       title: 'Bài Đà Nẵng 3',
-      location: { name: 'Đà Nẵng', placeId: 'place_danang' },
+      location: { name: nameDanang, placeId: placeIdDanang },
     });
 
-    const res = await api('GET', '/stats/locations', { token: admin });
+    const res = await api('GET', '/stats/locations?limit=50', { token: admin });
     assert.equal(res.status, 200);
     assert.ok(Array.isArray(res.body));
 
-    const daNang = res.body.find((it) => it._id === 'place_danang');
+    const daNang = res.body.find((it) => it._id === placeIdDanang);
     assert.ok(daNang);
     assert.equal(daNang.count, 3);
-    assert.equal(daNang.name, 'Đà Nẵng');
+    assert.equal(daNang.name, nameDanang);
 
-    const hoiAn = res.body.find((it) => it._id === 'hoi an');
+    const expectedHoiAnId = `hoi an ${suffix}`;
+    const hoiAn = res.body.find((it) => it._id === expectedHoiAnId);
     assert.ok(hoiAn);
     assert.equal(hoiAn.count, 2);
-    assert.equal(hoiAn.name, 'Hội An');
+    assert.equal(hoiAn.name, nameHoiAn);
 
-    const daNangIndex = res.body.findIndex((it) => it._id === 'place_danang');
-    const hoiAnIndex = res.body.findIndex((it) => it._id === 'hoi an');
+    const daNangIndex = res.body.findIndex((it) => it._id === placeIdDanang);
+    const hoiAnIndex = res.body.findIndex((it) => it._id === expectedHoiAnId);
     assert.ok(daNangIndex < hoiAnIndex);
   });
 
@@ -1494,5 +1548,7 @@ describe('Thống kê địa điểm (C13 - F15)', () => {
     const r = await api('GET', '/stats/locations?limit=1', { token: admin });
     assert.equal(r.status, 200);
     assert.equal(r.body.length, 1);
+  });
+});
   });
 });
