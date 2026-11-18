@@ -548,6 +548,36 @@ a.btn:hover { text-decoration: none; }
   .header-search { display: none; }
 }
 
+/* ===== PlaceInput (B12): ô địa điểm có gợi ý Google Places ===== */
+.place-input { position: relative; }
+.place-input-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  max-height: 260px;
+  overflow-y: auto;
+}
+.place-input-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.place-input-item:hover,
+.place-input-item[aria-selected="true"] {
+  background: var(--surface-2);
+}
+.place-input-loading { padding: 8px 12px; }
+
 
 /* ===== (Mở rộng – A) Trình xem ảnh toàn màn hình ===== */
 body.no-scroll { overflow: hidden; }

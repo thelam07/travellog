@@ -10,6 +10,7 @@ import { Button } from '../components/Button';
 import { FormField } from '../components/FormField';
 import { ImageUploader, type OldImage } from '../components/ImageUploader';
 import { PageSpinner } from '../components/Spinner';
+import { PlaceInput, type PlaceInputValue } from '../components/PlaceInput';
 import { VisibilityPicker } from '../components/VisibilityPicker';
 import { useAuth } from '../contexts/AuthContext';
 import type { Post, Visibility } from '../types';
@@ -52,7 +53,7 @@ export default function PostFormPage() {
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [locationName, setLocationName] = useState('');
+  const [location, setLocation] = useState<PlaceInputValue>({ name: '' });
   const [tripDate, setTripDate] = useState(todayISO());
   const [cost, setCost] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('public');
@@ -70,7 +71,13 @@ export default function PostFormPage() {
         if (cancelled) return;
         setTitle(post.title);
         setContent(post.content);
-        setLocationName(post.location?.name ?? '');
+        setLocation({
+          name: post.location?.name ?? '',
+          placeId: post.location?.placeId,
+          address: post.location?.address,
+          lat: post.location?.lat,
+          lng: post.location?.lng,
+        });
         setTripDate(toDateInput(post.tripDate));
         setCost(post.cost ? String(post.cost) : '');
         setVisibility(post.visibility);
@@ -91,7 +98,7 @@ export default function PostFormPage() {
   const set = <K extends Field>(field: K, value: string | Visibility | File[]) => {
     if (field === 'title') setTitle(value as string);
     else if (field === 'content') setContent(value as string);
-    else if (field === 'location') setLocationName(value as string);
+    else if (field === 'location') setLocation((l) => ({ ...l, name: value as string }));
     else if (field === 'tripDate') setTripDate(value as string);
     else if (field === 'cost') setCost(value as string);
     else if (field === 'visibility') setVisibility(value as Visibility);
@@ -112,7 +119,7 @@ export default function PostFormPage() {
     if (!content.trim()) errs.content = 'Nội dung không được trống.';
     else if (content.length > CONTENT_MAX) errs.content = 'Nội dung tối đa 5000 kí tự.';
 
-    if (!locationName.trim()) errs.location = 'Tên địa điểm không được trống.';
+    if (!location.name.trim()) errs.location = 'Tên địa điểm không được trống.';
 
     if (!tripDate) errs.tripDate = 'Vui lòng chọn ngày đi.';
     else {
@@ -148,13 +155,19 @@ export default function PostFormPage() {
     setSubmitting(true);
     setFormError(null);
     try {
-      const location = { name: locationName.trim() };
+      const payloadLocation = {
+        name: location.name.trim(),
+        placeId: location.placeId,
+        address: location.address,
+        lat: location.lat,
+        lng: location.lng,
+      };
       let saved: Post;
       if (isEdit && id) {
         saved = await postsApi.updatePost(id, {
           title: title.trim(),
           content: content.trim(),
-          location,
+          location: payloadLocation,
           tripDate,
           cost: cost.trim() ? Number(cost) : 0,
           visibility,
@@ -165,7 +178,7 @@ export default function PostFormPage() {
         saved = await postsApi.createPost({
           title: title.trim(),
           content: content.trim(),
-          location,
+          location: payloadLocation,
           tripDate,
           cost: cost.trim() ? Number(cost) : 0,
           visibility,
@@ -223,14 +236,14 @@ export default function PostFormPage() {
         </FormField>
 
         <FormField label="Địa điểm" required htmlFor="pf-location" error={errors.location}>
-          <input
+          {/* B12: PlaceInput có gợi ý Google Places (server giữ key). Nếu key trống / lỗi, vẫn nhập tay được. */}
+          <PlaceInput
             id="pf-location"
-            type="text"
-            value={locationName}
+            value={location}
+            onChange={setLocation}
+            error={errors.location}
+            required
             maxLength={200}
-            aria-invalid={Boolean(errors.location)}
-            onChange={(e) => set('location', e.target.value)}
-            placeholder="Tên địa điểm (vd: Hà Nội, Phú Quốc…)"
           />
         </FormField>
 

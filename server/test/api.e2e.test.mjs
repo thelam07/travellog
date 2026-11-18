@@ -1311,3 +1311,41 @@ describe('Ẩn bình luận khi khoá tài khoản (C12 - BR09)', () => {
     assert.equal(guestGetUnlocked.body.items[0].replies.length, 1);
   });
 });
+
+// B12 (mục 10.1): Google Places — server giữ key, autocomplete + detail.
+// Mọi route đều cần JwtAuthGuard; thiếu key → 502 PLACES_UNAVAILABLE với thông báo tiếng Việt.
+describe('Gợi ý và chi tiết địa điểm Google Places (B12, mục 10.1)', () => {
+  test('Không có token → 401', async () => {
+    const r = await api('GET', '/places/autocomplete?q=Hà Nội');
+    assert.equal(r.status, 401);
+  });
+
+  test('Không có GOOGLE_PLACES_KEY → autocomplete và detail đều trả 502 PLACES_UNAVAILABLE', async () => {
+    const user = await register('placeuser');
+    const ac = await api('GET', '/places/autocomplete?q=Hà Nội', { token: user.token });
+    assert.equal(ac.status, 502);
+    assert.equal(ac.body?.error?.code, 'PLACES_UNAVAILABLE');
+    assert.match(ac.body?.error?.message ?? '', /nhập tay/i);
+
+    const det = await api('GET', '/places/abc123', { token: user.token });
+    assert.equal(det.status, 502);
+    assert.equal(det.body?.error?.code, 'PLACES_UNAVAILABLE');
+  });
+
+  test('q rỗng → 400 VALIDATION_ERROR', async () => {
+    const user = await register('placeempty');
+    const r = await api('GET', '/places/autocomplete?q=', { token: user.token });
+    assert.equal(r.status, 400);
+    assert.equal(r.body?.error?.code, 'VALIDATION_ERROR');
+    assert.ok(r.body?.error?.details?.q);
+  });
+
+  test('q dài hơn 100 kí tự → 400 VALIDATION_ERROR', async () => {
+    const user = await register('placelong');
+    const longQ = 'a'.repeat(101);
+    const r = await api('GET', `/places/autocomplete?q=${longQ}`, { token: user.token });
+    assert.equal(r.status, 400);
+    assert.equal(r.body?.error?.code, 'VALIDATION_ERROR');
+    assert.ok(r.body?.error?.details?.q);
+  });
+});
