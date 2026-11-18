@@ -29,7 +29,8 @@ export class NotificationsService {
       post: input.post ? new Types.ObjectId(input.post) : null,
     };
     const doc =
-      input.type === 'comment'
+      // Bình luận / trả lời: mỗi lần là nội dung mới nên luôn tạo thông báo mới (không gộp như thích, theo dõi)
+      input.type === 'comment' || input.type === 'reply'
         ? await this.notifications.create(key)
         : await this.notifications.findOneAndUpdate(
             key,

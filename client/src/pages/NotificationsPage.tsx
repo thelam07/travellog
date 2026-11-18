@@ -13,6 +13,8 @@ function describe(n: Notification): string {
       return `đã bình luận về bài viết “${n.post?.title ?? 'của bạn'}”`;
     case 'follow':
       return 'đã bắt đầu theo dõi bạn';
+    case 'reply':
+      return `đã trả lời bình luận của bạn trong bài “${n.post?.title ?? 'viết'}”`;
   }
 }
 
@@ -37,7 +39,7 @@ export default function NotificationsPage() {
   const open = (n: Notification) => {
     void markRead(n._id);
     if (n.type === 'follow' || !n.post) navigate(`/u/${n.actor.username}`);
-    else navigate(`/posts/${n.post._id}${n.type === 'comment' ? '#comments' : ''}`);
+    else navigate(`/posts/${n.post._id}${n.type === 'comment' || n.type === 'reply' ? '#comments' : ''}`);
   };
 
   return (
