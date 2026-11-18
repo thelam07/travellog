@@ -960,3 +960,35 @@ body.no-scroll { overflow: hidden; }
 .profile-posts { display: flex; flex-direction: column; gap: 12px; }
 .profile-posts-title { font-size: 1.15rem; margin: 8px 0 0; }
 .post-image-btn { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; position: relative; }
+
+/* ===== (A) Bình luận kiểu bản mẫu: avatar cạnh ô viết, bong bóng, hàng thời gian · Trả lời · Xoá ===== */
+.comment-list-container { gap: 14px; }
+.comment-form { display: flex; gap: 10px; align-items: flex-start; }
+.comment-input-wrapper { flex: 1; min-width: 0; background: none; border: 0; padding: 0; gap: 6px; }
+.comment-input-wrapper:focus-within { border-color: transparent; }
+.comment-textarea {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 12px; min-height: 0;
+}
+.comment-textarea:focus { border-color: var(--primary); }
+.comment-form-footer { border-top: 0; padding-top: 0; justify-content: flex-end; }
+.comment-form-actions .btn-primary { border-radius: 999px; }
+.comment-guest-prompt { margin-left: 0; }
+.comment-root-item { padding-bottom: 0; border-bottom: 0; }
+.comment-reply-item { padding: 0; }
+.comment-body { display: flex; flex-direction: column; gap: 2px; }
+.comment-bubble {
+  background: var(--surface-2); border-radius: 14px; padding: 6px 12px;
+  align-self: flex-start; max-width: 100%;
+}
+.comment-author-name { font-weight: 700; }
+.comment-content { font-size: 0.93rem; }
+.comment-actions { gap: 10px; padding: 0 12px; margin-top: 0; }
+.comment-time { font-size: 0.8rem; color: var(--text-muted); }
+.comment-action-btn.reply-btn { color: var(--primary); }
+.comment-action-btn.delete-btn { color: var(--danger); }
+.comment-reply-form-wrapper { margin: 6px 0 0; }
+.comment-replies-list { margin: 8px 0 0; padding-left: 12px; border-left: 2px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+@media (max-width: 560px) { .comment-reply-form-wrapper { margin-left: 0; } .comment-replies-list { margin-left: 0; } }
+.viewer-comments { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.viewer-comments-title { margin: 0; font-size: 1rem; }
