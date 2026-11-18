@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { CursorPage, Profile, User, UserSummary } from '../types';
+import type { CursorPage, MapPoint, Profile, User, UserSummary } from '../types';
 
 const path = (username: string) => `/users/${encodeURIComponent(username)}`;
 
@@ -16,6 +16,9 @@ export const usersApi = {
     api
       .get<CursorPage<UserSummary>>(`${path(username)}/following`, { params: { cursor: cursor ?? undefined } })
       .then((r) => r.data),
+  // B14 (N01): danh sách ghim bản đồ của người dùng (bài có toạ độ, qua visibilityFilter).
+  map: (username: string) =>
+    api.get<MapPoint[]>(`${path(username)}/map`).then((r) => r.data),
   updateMe: (body: { displayName?: string; bio?: string }) => api.patch<User>('/users/me', body).then((r) => r.data),
   updateAvatar: (file: File) => {
     const form = new FormData();
