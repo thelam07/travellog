@@ -27,4 +27,5 @@ export const usersApi = {
   },
   follow: (userId: string) => api.post<{ following: boolean }>('/follows', { userId }).then((r) => r.data),
   unfollow: (userId: string) => api.delete<{ following: boolean }>(`/follows/${userId}`).then((r) => r.data),
+  suggestions: () => api.get<UserSummary[]>('/users/suggestions').then((r) => r.data),
 };

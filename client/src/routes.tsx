@@ -6,6 +6,7 @@ import RequireRole from './components/RequireRole';
 import { useAuth } from './contexts/AuthContext';
 import AdminLayout from './layouts/AdminLayout';
 import AdminReportsPage from './pages/admin/AdminReportsPage';
+import AdminStatsPage from './pages/admin/AdminStatsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AuthLayout from './layouts/AuthLayout';
 import MainLayout from './layouts/MainLayout';
@@ -16,7 +17,6 @@ import FeedPage from './pages/FeedPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import NotificationsPage from './pages/NotificationsPage';
-import PlaceholderPage from './pages/PlaceholderPage';
 import PostDetailPage from './pages/PostDetailPage';
 import PostFormPage from './pages/PostFormPage';
 import ExplorePage from './pages/ExplorePage';
@@ -71,7 +71,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/admin/reports" replace /> },
           { path: 'reports', element: <AdminReportsPage /> },
           { path: 'users', element: <AdminUsersPage /> },
-          { path: 'stats', element: <PlaceholderPage title="Thống kê địa điểm" /> }, // C
+          { path: 'stats', element: <AdminStatsPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },

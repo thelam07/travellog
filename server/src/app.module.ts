@@ -12,6 +12,7 @@ import { CommentsModule } from './comments/comments.module';
 import { PlacesModule } from './places/places.module';
 import { ReportsModule } from './reports/reports.module';
 import { StorageModule } from './common/storage/storage.module';
+import { StatsModule } from './stats/stats.module';
 import { UsersModule } from './users/users.module';
 
 // Render gọi để kiểm tra server còn sống; cũng dùng để "đánh thức" server trước khi demo.
@@ -42,6 +43,7 @@ class HealthController {
     CommentsModule,
     PlacesModule,
     ReportsModule,
+    StatsModule,
     StorageModule,
   ],
   controllers: [HealthController],
