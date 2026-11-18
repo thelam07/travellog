@@ -77,6 +77,7 @@ export function FeedPage() {
   return (
     <div className="feed-layout">
       <div className="feed-main stack">
+        <h1 className="page-title">Bảng tin</h1>
         {items.length === 0 ? (
           <div className="feed-empty-container">
             <EmptyState
