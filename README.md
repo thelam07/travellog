@@ -69,7 +69,8 @@ Dùng trên web thật (https://travellog-rust.vercel.app) hoặc trên máy sau
 | Thành viên | `hoa@demo.travellog` (Hoa Lê) | `Demo12345` |
 | Thành viên | `tuan@demo.travellog` (Tuấn Phạm) | `Demo12345` |
 | Thành viên | `mai@demo.travellog` (Mai Vũ) | `Demo12345` |
-| Admin | `admin@travellog.local`, đăng nhập ở `/admin/login` | Gửi riêng cho giảng viên (repo công khai nên không ghi ở đây) |
+| Admin | `admin.demo@travellog.local` (admin thường), đăng nhập ở `/admin/login` | `AdminDemo123` |
+| Admin gốc | `admin@travellog.local` (chỉ admin gốc trao / thu quyền admin) | Gửi riêng cho giảng viên |
 
 Gợi ý thử nhanh:
 
