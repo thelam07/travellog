@@ -22,7 +22,7 @@ export default function MainLayout() {
           {showHeaderSearch && (
             <div className="desktop-only header-search">
               {/* B11: ô tìm kiếm — gõ xong 400ms tự chuyển tới /explore?q=... */}
-              <SearchBox />
+              <SearchBox suggestUsers placeholder="Tìm địa điểm, #hashtag hoặc @người dùng" />
             </div>
           )}
           <nav className="nav">

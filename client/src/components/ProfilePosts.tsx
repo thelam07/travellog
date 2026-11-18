@@ -35,7 +35,7 @@ export default function ProfilePosts({ username, isSelf }: Props) {
     setError(null);
     setLoading(true);
     postsApi
-      .list({ author: username })
+      .search({ author: username })
       .then((page) => {
         if (!active) return;
         setItems(page.items);
@@ -54,7 +54,7 @@ export default function ProfilePosts({ username, isSelf }: Props) {
     busy.current = true;
     setLoading(true);
     try {
-      const page = await postsApi.list({ author: username, cursor });
+      const page = await postsApi.search({ author: username, cursor });
       // Bỏ bài trùng phòng khi có bài mới đăng chen giữa hai lần tải
       setItems((prev) => [...prev, ...page.items.filter((p) => !prev.some((x) => x._id === p._id))]);
       setCursor(page.nextCursor);

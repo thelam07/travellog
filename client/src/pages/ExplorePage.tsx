@@ -14,6 +14,8 @@ import { PostCard } from '../components/PostCard';
 import { SearchBox } from '../components/SearchBox';
 import { PageSpinner, Spinner } from '../components/Spinner';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
+import { useUserSearch } from '../hooks/useUserSearch';
+import UserMiniCard from '../components/UserMiniCard';
 import type { Post } from '../types';
 
 export default function ExplorePage() {
@@ -38,6 +40,9 @@ export default function ExplorePage() {
   const isHashtag = trimmedQ.startsWith('#');
   const q = isHashtag ? undefined : trimmedQ || undefined;
   const tag = isHashtag ? trimmedQ.slice(1).toLowerCase() : undefined;
+  // (A – E01) Tìm người dùng cùng ô tìm kiếm; gõ "@lan" thì chỉ tìm người dùng, không tìm bài
+  const userOnly = trimmedQ.startsWith('@');
+  const { users, loading: usersLoading } = useUserSearch(trimmedQ);
   const minN = urlMinCost.trim() ? Number(urlMinCost) : undefined;
   const maxN = urlMaxCost.trim() ? Number(urlMaxCost) : undefined;
 
@@ -79,8 +84,9 @@ export default function ExplorePage() {
 
   // Tải lại khi q / tag / cost đổi (URL đổi).
   useEffect(() => {
+    if (userOnly) return; // "@..." chỉ tìm người dùng
     loadPage(null, true);
-  }, [loadPage]);
+  }, [loadPage, userOnly]);
 
   const sentinelRef = useInfiniteScroll(
     () => {
@@ -139,6 +145,17 @@ export default function ExplorePage() {
         </div>
       </div>
 
+      {(users.length > 0 || userOnly) && (
+        <section className="card explore-users" aria-label="Người dùng">
+          <h2 className="explore-users-title">Người dùng</h2>
+          {users.map((u) => (
+            <UserMiniCard key={u._id} user={u} />
+          ))}
+          {!users.length && <p className="muted small">{usersLoading ? 'Đang tìm…' : 'Không có người dùng phù hợp.'}</p>}
+        </section>
+      )}
+
+      {!userOnly && (<>
       {error && (
         <div className="alert alert-error">{error}</div>
       )}
@@ -174,6 +191,7 @@ export default function ExplorePage() {
           )}
         </div>
       )}
+      </>)}
     </div>
   );
 }
