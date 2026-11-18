@@ -1624,5 +1624,3 @@ describe('Gợi ý người nên theo dõi (C14 - N02)', () => {
     assert.equal(hasPostAfter, true);
   });
 });
-  });
-});
