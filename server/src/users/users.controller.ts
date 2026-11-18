@@ -142,6 +142,15 @@ export class UsersController {
     return this.follows.listUsers(user._id, 'following', cursor);
   }
 
+  // B14 (N01): bản đồ trang cá nhân — các bài có toạ độ của tác giả, đã qua visibilityFilter.
+  // Đặt trong UsersController cho khớp URL /users/:username/map; logic lọc ở PostsService.
+  @Get(':username/map')
+  @UseGuards(OptionalJwtAuthGuard)
+  async map(@Param('username') username: string, @CurrentUser() viewer?: AuthUser) {
+    const user = await this.findVisible(username, viewer);
+    return this.posts.listMapPoints(user._id, viewer);
+  }
+
   // Số bài của người này mà người xem được thấy: cùng bộ lọc quyền xem với bảng tin, chi tiết bài (BR01, BR09, BR10).
   // Khách chỉ đếm bài công khai; người theo dõi đếm thêm bài "chỉ người theo dõi"; chính chủ đếm cả bài bị ẩn; admin đếm hết.
   private async countPosts(authorId: Types.ObjectId, viewer?: AuthUser) {
