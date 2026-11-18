@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { PagedList, Post, Report, ReportStatus, Role, User } from '../types';
+import type { LocationStat, PagedList, Post, Report, ReportStatus, Role, User } from '../types';
 
 export const adminApi = {
   users: (params: { q?: string; page: number }) =>
@@ -16,4 +16,6 @@ export const adminApi = {
     api.patch<{ updated: number }>(`/reports/${id}`, body).then((r) => r.data),
   updatePostStatus: (id: string, body: { status: 'active' | 'hidden' }) =>
     api.patch<Post>(`/admin/posts/${id}`, body).then((r) => r.data),
+  locationStats: (params?: { limit?: number }) =>
+    api.get<LocationStat[]>('/stats/locations', { params }).then((r) => r.data),
 };

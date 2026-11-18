@@ -1478,6 +1478,79 @@ describe('Thông báo trả lời bình luận (A – mở rộng của BR08)', 
   });
 });
 
+describe('Thống kê địa điểm (C13 - F15)', () => {
+  test('Khách gọi 401, thành viên gọi 403', async () => {
+    const guest = await api('GET', '/stats/locations');
+    assert.equal(guest.status, 401);
+
+    const member = await register('statsmem');
+    const memRes = await api('GET', '/stats/locations', { token: member.token });
+    assert.equal(memRes.status, 403);
+  });
+
+  test('Top địa điểm đúng thứ tự, gộp Hội An và hoi an khi không có placeId', async () => {
+    const author = await register('statsauthor');
+    const suffix = Date.now();
+    const nameHoiAn = `Hội An ${suffix}`;
+    const nameHoiAnLower = `hoi an ${suffix}`;
+    const nameDanang = `Đà Nẵng ${suffix}`;
+    const placeIdDanang = `place_danang_${suffix}`;
+
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Hội An 1',
+      location: { name: nameHoiAnLower },
+    });
+
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Hội An 2',
+      location: { name: nameHoiAn },
+    });
+
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Đà Nẵng 1',
+      location: { name: nameDanang, placeId: placeIdDanang },
+    });
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Đà Nẵng 2',
+      location: { name: nameDanang, placeId: placeIdDanang },
+    });
+    await makePost(author.token, {
+      ...basePost,
+      title: 'Bài Đà Nẵng 3',
+      location: { name: nameDanang, placeId: placeIdDanang },
+    });
+
+    const res = await api('GET', '/stats/locations?limit=50', { token: admin });
+    assert.equal(res.status, 200);
+    assert.ok(Array.isArray(res.body));
+
+    const daNang = res.body.find((it) => it._id === placeIdDanang);
+    assert.ok(daNang);
+    assert.equal(daNang.count, 3);
+    assert.equal(daNang.name, nameDanang);
+
+    const expectedHoiAnId = `hoi an ${suffix}`;
+    const hoiAn = res.body.find((it) => it._id === expectedHoiAnId);
+    assert.ok(hoiAn);
+    assert.equal(hoiAn.count, 2);
+    assert.equal(hoiAn.name, nameHoiAn);
+
+    const daNangIndex = res.body.findIndex((it) => it._id === placeIdDanang);
+    const hoiAnIndex = res.body.findIndex((it) => it._id === expectedHoiAnId);
+    assert.ok(daNangIndex < hoiAnIndex);
+  });
+
+  test('limit tham số hoạt động đúng', async () => {
+    const r = await api('GET', '/stats/locations?limit=1', { token: admin });
+    assert.equal(r.status, 200);
+    assert.equal(r.body.length, 1);
+  });
+});
+
 describe('Gợi ý người nên theo dõi (C14 - N02)', () => {
   test('Khách gọi 401, admin gọi 403', async () => {
     const guest = await api('GET', '/users/suggestions');
@@ -1549,5 +1622,7 @@ describe('Gợi ý người nên theo dõi (C14 - N02)', () => {
     assert.equal(feedAfter.status, 200);
     const hasPostAfter = feedAfter.body.items.some((p) => p.author._id === writer.user._id);
     assert.equal(hasPostAfter, true);
+  });
+});
   });
 });
