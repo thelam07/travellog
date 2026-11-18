@@ -34,6 +34,8 @@ export default function PostDetailPage() {
   const url = id ? `/posts/${id}` : null;
   const { data: post, loading, error } = useFetch<Post>(url);
   const [commentCount, setCommentCount] = useState<number>(0);
+  // Bình luận trong trình xem ảnh thay đổi thì tải lại danh sách bình luận bên dưới (A, mở rộng)
+  const [commentsKey, setCommentsKey] = useState(0);
 
   useEffect(() => {
     if (post) {
@@ -123,7 +125,14 @@ export default function PostDetailPage() {
         <PostMeta location={post.location} tripDate={post.tripDate} cost={post.cost} />
 
         {/* Ảnh */}
-        {post.images.length > 0 && <PostGallery images={post.images} post={post} />}
+        {post.images.length > 0 && <PostGallery
+            images={post.images}
+            post={post}
+            onCommentCountChange={(delta) => {
+              setCommentCount((c) => Math.max(0, c + delta));
+              setCommentsKey((k) => k + 1);
+            }}
+          />}
 
         {/* Nội dung */}
         <div className="post-detail-content">
@@ -162,6 +171,7 @@ export default function PostDetailPage() {
         <section className="post-comments-section">
           <h2 className="post-comments-heading">Bình luận ({commentCount})</h2>
           <CommentList
+            key={commentsKey}
             postId={post._id}
             postAuthorId={post.author._id}
             onCommentCountChange={(delta) => setCommentCount((c) => Math.max(0, c + delta))}

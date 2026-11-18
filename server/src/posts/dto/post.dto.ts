@@ -144,3 +144,42 @@ export class UpdatePostDto {
   @IsString({ message: 'keepImageIds phải là chuỗi JSON' })
   keepImageIds?: string;
 }
+
+// B10: query cho GET /api/posts (danh sách + tìm kiếm, mục 5.2).
+// - q: từ khoá; nếu bắt đầu bằng "#" thì coi là hashtag, ngược lại so trên location.nameKey.
+// - tag: hashtag (bỏ dấu # nếu có). Có cả q và tag thì $or.
+// - author: username; không có user thì trả danh sách rỗng.
+// - minCost / maxCost: số ≥ 0; minCost > maxCost → 400 (kiểm ở service).
+// - cursor: con trỏ phân trang (BR12).
+export class QueryPostDto {
+  @IsOptional()
+  @IsString({ message: 'q phải là chuỗi' })
+  @MaxLength(100, { message: 'q tối đa 100 kí tự' })
+  q?: string;
+
+  @IsOptional()
+  @IsString({ message: 'tag phải là chuỗi' })
+  @MaxLength(50, { message: 'tag tối đa 50 kí tự' })
+  tag?: string;
+
+  @IsOptional()
+  @IsString({ message: 'author phải là chuỗi' })
+  @MaxLength(30, { message: 'author tối đa 30 kí tự' })
+  author?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'minCost phải là số' })
+  @Min(0, { message: 'minCost phải ≥ 0' })
+  minCost?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'maxCost phải là số' })
+  @Min(0, { message: 'maxCost phải ≥ 0' })
+  maxCost?: number;
+
+  @IsOptional()
+  @IsString({ message: 'cursor phải là chuỗi' })
+  cursor?: string;
+}
