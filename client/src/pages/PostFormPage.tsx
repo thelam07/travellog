@@ -106,6 +106,14 @@ export default function PostFormPage() {
     setFormError(null);
   };
 
+  // PlaceInput trả cả object (tên + placeId, toạ độ khi chọn gợi ý) nên không đi qua set(),
+  // nhưng vẫn phải xoá lỗi "Tên địa điểm không được trống" khi người dùng gõ lại như các ô khác.
+  const changeLocation = (value: typeof location) => {
+    setLocation(value);
+    if (errors.location) setErrors((e) => ({ ...e, location: undefined }));
+    setFormError(null);
+  };
+
   const removeOld = (imgId: string) => {
     setOldImages(oldImages.filter((i) => i._id !== imgId));
   };
@@ -240,7 +248,7 @@ export default function PostFormPage() {
           <PlaceInput
             id="pf-location"
             value={location}
-            onChange={setLocation}
+            onChange={changeLocation}
             error={errors.location}
             required
             maxLength={200}
