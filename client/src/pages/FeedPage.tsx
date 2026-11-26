@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { useFeedStore } from '../stores/useFeedStore';
 import type { UserSummary } from '../types';
+import { Compass } from 'lucide-react';
 
 export function FeedPage() {
   const { user } = useAuth();
@@ -81,7 +82,7 @@ export function FeedPage() {
         {items.length === 0 ? (
           <div className="feed-empty-container">
             <EmptyState
-              icon="🧭"
+              icon={<Compass size={48} strokeWidth={1.5} />}
               title="Bảng tin của bạn đang trống"
               description="Hãy theo dõi những người dùng khác hoặc khám phá bài viết mới nhất để cập nhật bảng tin."
               action={

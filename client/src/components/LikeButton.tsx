@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { parseError } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeedStore } from '../stores/useFeedStore';
+import { Heart } from 'lucide-react';
 
 export interface LikeButtonProps {
   postId: string;
@@ -55,8 +56,10 @@ export function LikeButton({ postId, initialLiked = false, initialCount = 0, cla
         disabled={isPending}
         onClick={handleClick}
         title={likedByMe ? 'Bỏ thích' : 'Thích'}
+        aria-label={`${likedByMe ? 'Bỏ thích' : 'Thích'}, ${likeCount} lượt thích`}
+        aria-pressed={likedByMe}
       >
-        <span>{likedByMe ? '❤️' : '🤍'}</span>
+        <Heart size={18} fill={likedByMe ? 'currentColor' : 'none'} aria-hidden />
         <span>{likeCount}</span>
       </button>
       {error && <span className="field-error like-error">{error}</span>}

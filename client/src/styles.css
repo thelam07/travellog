@@ -116,7 +116,7 @@ h1, h2, h3 { line-height: 1.25; margin: 0 0 12px; }
 .admin-side { background: var(--surface); border-right: 1px solid var(--border); padding: 16px; display: flex; flex-direction: column; gap: 20px; position: sticky; top: 0; height: 100vh; }
 .admin-side .brand .badge { margin-left: 6px; }
 .admin-nav { display: flex; flex-direction: column; gap: 4px; }
-.admin-nav a { border-radius: var(--radius-sm); padding: 0.55rem 0.8rem; }
+.admin-nav a { border-radius: var(--radius-sm); padding: 0.55rem 0.8rem; display: flex; align-items: center; gap: 10px; }
 .admin-body { min-width: 0; display: flex; flex-direction: column; }
 .admin-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0.6rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--surface); }
 .admin-user { display: flex; align-items: center; gap: 8px; font-weight: 600; }
@@ -281,7 +281,7 @@ a.btn:hover { text-decoration: none; }
 .post-title-link { color: inherit; text-decoration: none; }
 .post-title { font-size: 1.25rem; margin-bottom: 4px; }
 .post-details { display: flex; flex-wrap: wrap; gap: 12px; }
-.detail-item { display: flex; align-items: center; gap: 4px; }
+.detail-item { display: inline-flex; align-items: center; gap: 4px; }
 .post-content-preview { white-space: pre-line; margin: 0; }
 .post-image-preview { position: relative; width: 100%; border-radius: var(--radius-sm); overflow: hidden; background: var(--surface-2); }
 .post-cover-image { width: 100%; max-height: 400px; object-fit: cover; border-radius: var(--radius-sm); }
@@ -339,7 +339,7 @@ a.btn:hover { text-decoration: none; }
     color: var(--text-muted); font-size: 0.72rem; font-weight: 600;
   }
   .bottom-nav .nav-item:hover { text-decoration: none; }
-  .bottom-nav .nav-item > span:first-child { font-size: 1.25rem; line-height: 1; }
+  .bottom-nav .nav-item > span:first-child { display: inline-flex; line-height: 1; }
   .bottom-nav .nav-item.active { color: var(--primary); }
   /* Nút "Đăng bài" ở giữa: dấu ＋ trong vòng tròn màu chủ đạo */
   .bottom-nav .nav-primary > span:first-child {
@@ -493,6 +493,7 @@ a.btn:hover { text-decoration: none; }
 .image-uploader-remove:hover { background: rgba(0, 0, 0, 0.85); }
 .image-uploader-add {
   aspect-ratio: 1 / 1;
+  flex-direction: column; gap: 4px;
   border: 2px dashed var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
@@ -519,7 +520,7 @@ a.btn:hover { text-decoration: none; }
 .visibility-option:hover { border-color: var(--primary); }
 .visibility-option.active { border-color: var(--primary); background: var(--primary-soft); }
 .visibility-option input[type='radio'] { margin: 0; }
-.visibility-icon { font-size: 1.1rem; }
+.visibility-icon { color: var(--primary); }
 .visibility-label { font-weight: 600; }
 .visibility-hint { grid-column: 2 / -1; color: var(--text-muted); font-size: 0.85rem; }
 
@@ -538,7 +539,7 @@ a.btn:hover { text-decoration: none; }
 
 .post-meta-list { display: flex; flex-wrap: wrap; gap: 12px 18px; color: var(--text-muted); font-size: 0.95rem; }
 .post-meta-item { display: inline-flex; align-items: center; gap: 6px; }
-.post-meta-icon { font-size: 1.05rem; }
+.post-meta-icon { display: inline-flex; color: var(--primary); }
 
 .post-gallery { display: flex; flex-direction: column; gap: 8px; }
 .post-gallery-main {
@@ -1190,6 +1191,7 @@ body.no-scroll { overflow: hidden; }
 .search-suggest-posts {
   margin-top: 4px; padding: 8px 10px; border: 0; border-top: 1px solid var(--border);
   background: none; color: var(--primary); font: inherit; font-weight: 600; text-align: left; cursor: pointer; border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  display: flex; align-items: center; gap: 6px;
 }
 .search-suggest-posts:hover { background: var(--surface-2); }
 .explore-users { display: flex; flex-direction: column; gap: 2px; }
@@ -1197,7 +1199,7 @@ body.no-scroll { overflow: hidden; }
 /* Ẩn nút xoá mặc định của trình duyệt (ô đã có nút × riêng) */
 .search-box input[type='search']::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
 /* (A) Kính lúp trong ô tìm kiếm như bản mẫu */
-.search-box-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.85rem; opacity: 0.7; pointer-events: none; }
+.search-box-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); display: inline-flex; color: var(--text-muted); pointer-events: none; }
 .search-box input[type='search'] { padding-left: 2.1rem; }
 
 /* ===== (A) Ảnh bài dạng lưới như bản mẫu (thẻ bài + trang chi tiết) ===== */
@@ -1287,3 +1289,7 @@ body.no-scroll { overflow: hidden; }
 .stats-location-name {
   color: var(--text);
 }
+
+/* Icon Lucide (SVG, nét theo currentColor): không co lại khi nằm trong hàng flex */
+.lucide { flex-shrink: 0; }
+.stats-heart { color: var(--like); }

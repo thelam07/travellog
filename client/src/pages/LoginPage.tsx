@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import { fieldErrorsFrom, parseError } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { hasErrors, validateEmail, type Errors } from '../utils/validators';
+import { ArrowLeft } from 'lucide-react';
 
 type Field = 'email' | 'password';
 
@@ -105,7 +106,7 @@ export default function LoginPage({ admin = false }: { admin?: boolean }) {
       </form>
       {admin ? (
         <p className="small">
-          <Link to="/login">← Đăng nhập thành viên</Link>
+          <Link to="/login" className="detail-item"><ArrowLeft size={16} aria-hidden />Đăng nhập thành viên</Link>
         </p>
       ) : (
         <>
