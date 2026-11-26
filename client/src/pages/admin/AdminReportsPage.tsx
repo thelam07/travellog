@@ -5,6 +5,7 @@ import { parseError } from '../../api/client';
 import { Spinner } from '../../components/Spinner';
 import type { PagedList, Report, ReportStatus } from '../../types';
 import { formatDate } from '../../utils/format';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const REASON_LABELS: Record<string, string> = {
   spam: 'Spam',
@@ -275,7 +276,8 @@ export default function AdminReportsPage() {
             disabled={page <= 1 || loading}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
-            ‹ Trước
+            <ChevronLeft size={16} aria-hidden />
+            Trước
           </button>
           <span className="muted small">
             Trang {data.page}/{totalPages} · {data.total} báo cáo
@@ -286,7 +288,8 @@ export default function AdminReportsPage() {
             disabled={page >= totalPages || loading}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
           >
-            Sau ›
+            Sau
+            <ChevronRight size={16} aria-hidden />
           </button>
         </nav>
       )}

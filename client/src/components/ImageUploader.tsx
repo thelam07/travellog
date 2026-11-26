@@ -3,6 +3,7 @@
 
 import { useRef, useState, type ChangeEvent } from 'react';
 import { useImagePreviews } from '../hooks/useImagePreviews';
+import { ImagePlus, X } from 'lucide-react';
 
 const ACCEPT = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -101,7 +102,7 @@ export function ImageUploader({
               aria-label="Bỏ ảnh"
               onClick={() => removeOld(img._id)}
             >
-              ×
+              <X size={16} />
             </button>
           </div>
         ))}
@@ -114,7 +115,7 @@ export function ImageUploader({
               aria-label="Bỏ ảnh"
               onClick={() => removeNew(i)}
             >
-              ×
+              <X size={16} />
             </button>
           </div>
         ))}
@@ -124,7 +125,8 @@ export function ImageUploader({
             className="image-uploader-add"
             onClick={() => input.current?.click()}
           >
-            + Thêm ảnh
+            <ImagePlus size={22} aria-hidden />
+            Thêm ảnh
           </button>
         )}
       </div>

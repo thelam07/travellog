@@ -4,6 +4,7 @@ import { parseError } from '../../api/client';
 import { EmptyState } from '../../components/EmptyState';
 import { Spinner } from '../../components/Spinner';
 import type { LocationStat } from '../../types';
+import { Heart, MapPin } from 'lucide-react';
 
 export default function AdminStatsPage() {
   const [limit, setLimit] = useState(10);
@@ -69,7 +70,7 @@ export default function AdminStatsPage() {
 
       {!loading && !error && items.length === 0 && (
         <EmptyState
-          icon="📍"
+          icon={<MapPin size={48} strokeWidth={1.5} />}
           title="Chưa có dữ liệu thống kê"
           description="Chưa có bài viết nào ở trạng thái hoạt động để thống kê."
         />
@@ -141,7 +142,7 @@ export default function AdminStatsPage() {
                       <strong className="stats-location-name">{item.name}</strong>
                     </td>
                     <td data-label="Số bài viết">{item.count}</td>
-                    <td data-label="Tổng lượt thích">❤️ {item.likes}</td>
+                    <td data-label="Tổng lượt thích"><span className="detail-item"><Heart size={15} fill="currentColor" className="stats-heart" aria-hidden />{item.likes}</span></td>
                   </tr>
                 ))}
               </tbody>

@@ -1,4 +1,5 @@
 import { useTheme } from '../contexts/ThemeContext';
+import { Moon, Sun } from 'lucide-react';
 
 /** Nút đổi sáng / tối, dùng trên header, menu admin và trang đăng nhập */
 export default function ThemeToggle({ className = '' }: { className?: string }) {
@@ -6,7 +7,7 @@ export default function ThemeToggle({ className = '' }: { className?: string }) 
   const label = theme === 'dark' ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối';
   return (
     <button type="button" className={`icon-btn ${className}`.trim()} onClick={toggleTheme} aria-label={label} title={label}>
-      {theme === 'dark' ? '☀️' : '🌙'}
+      {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
     </button>
   );
 }

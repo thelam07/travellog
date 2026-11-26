@@ -21,6 +21,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFetch } from '../hooks/useFetch';
 import { timeAgo } from '../utils/format';
 import type { Post } from '../types';
+import { Flag, MessageCircle, SearchX } from 'lucide-react';
 
 export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,7 +50,7 @@ export default function PostDetailPage() {
     return (
       <div className="container">
         <EmptyState
-          icon="🔍"
+          icon={<SearchX size={48} strokeWidth={1.5} />}
           title="Bài viết không tồn tại hoặc bạn không có quyền xem"
           description={error ?? undefined}
           action={
@@ -156,14 +157,15 @@ export default function PostDetailPage() {
             initialLiked={post.likedByMe}
             initialCount={post.likeCount}
           />
-          <span className="post-detail-comments-count">💬 {commentCount}</span>
+          <span className="post-detail-comments-count"><MessageCircle size={18} aria-hidden />{commentCount}</span>
           {canReport && (
             <button
               type="button"
               className="btn btn-ghost btn-sm report-post-btn"
               onClick={() => setReportOpen(true)}
             >
-              🚩 Báo cáo
+              <Flag size={16} aria-hidden />
+              Báo cáo
             </button>
           )}
         </div>

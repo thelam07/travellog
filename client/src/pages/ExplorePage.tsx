@@ -17,6 +17,7 @@ import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { useUserSearch } from '../hooks/useUserSearch';
 import UserMiniCard from '../components/UserMiniCard';
 import type { Post } from '../types';
+import { SearchX } from 'lucide-react';
 
 export default function ExplorePage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -184,7 +185,7 @@ export default function ExplorePage() {
 
       {!initialLoading && posts.length === 0 && (
         <EmptyState
-          icon="🔍"
+          icon={<SearchX size={48} strokeWidth={1.5} />}
           title="Không có bài viết nào"
           description={
             urlQ || urlMinCost || urlMaxCost

@@ -4,6 +4,7 @@ import { usersApi } from '../api/users';
 import { parseError } from '../api/client';
 import type { UserSummary } from '../types';
 import UserInitial from './UserInitial';
+import { X } from 'lucide-react';
 
 interface Props {
   username: string;
@@ -48,7 +49,7 @@ export default function FollowListDialog({ username, kind, onClose }: Props) {
         <div className="dialog-head">
           <h2>{kind === 'followers' ? 'Người theo dõi' : 'Đang theo dõi'}</h2>
           <button type="button" className="btn btn-ghost" onClick={onClose} aria-label="Đóng">
-            ✕
+            <X size={20} />
           </button>
         </div>
         {error && <div className="alert alert-error">{error}</div>}
