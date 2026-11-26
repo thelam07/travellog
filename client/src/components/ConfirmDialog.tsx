@@ -1,5 +1,5 @@
 // client/src/components/ConfirmDialog.tsx
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useId, type ReactNode } from 'react';
 import { Button } from './Button';
 
 export interface ConfirmDialogProps {
@@ -23,6 +23,8 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const titleId = useId();
+
   // Xử lý đóng khi bấm Esc
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -36,9 +38,16 @@ export function ConfirmDialog({
 
   return (
     <div className="dialog-backdrop" onClick={onCancel}>
-      <div className="dialog card" onClick={(e) => e.stopPropagation()}>
+      {/* role="dialog" + aria-labelledby để trình đọc màn hình nhận ra đây là hộp thoại và đọc tiêu đề */}
+      <div
+        className="dialog card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="dialog-head">
-          <h2>{title}</h2>
+          <h2 id={titleId}>{title}</h2>
         </div>
         <div style={{ margin: '12px 0' }}>
           {message}
