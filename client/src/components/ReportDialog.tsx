@@ -78,7 +78,13 @@ export function ReportDialog({ open, postId, onClose, onSuccess }: ReportDialogP
 
   return (
     <div className="dialog-backdrop" onClick={loading ? undefined : onClose}>
-      <div className="dialog card report-dialog" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="dialog card report-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Báo cáo bài viết"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="dialog-head">
           <h2>Báo cáo bài viết</h2>
         </div>

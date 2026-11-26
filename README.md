@@ -58,6 +58,19 @@ API_URL=http://localhost:3001/api ADMIN_PASSWORD=<mật khẩu admin trong .env>
 
 Test e2e tự đăng ký tài khoản riêng mỗi lần chạy, chỉ cần có admin. Ai merge API mới thì thêm test vào `server/test/api.e2e.test.mjs`. Server giới hạn đăng nhập 30 lần/phút mỗi IP (BR25), mà mỗi lần chạy e2e đăng nhập khoảng 14 lần: chạy liên tiếp quá 2 lần trong một phút thì các test có đăng nhập sẽ nhận 429, đợi 1 phút rồi chạy lại.
 
+### Test giao diện (Playwright)
+
+Mở trình duyệt thật và bấm như người dùng qua các luồng chính: khách xem và tìm bài, đăng ký và đăng nhập, đăng / sửa / xoá bài có ảnh, theo dõi và quyền xem bài "Chỉ người theo dõi", thích, bình luận và trả lời, thông báo tức thời, báo cáo, admin ẩn bài, khoá tài khoản, thống kê, giao diện điện thoại và chế độ tối. Gồm 30 test trong `client/e2e/`.
+
+```bash
+cd client
+npx playwright install chromium   # lần đầu: tải trình duyệt
+npm run test:ui-e2e               # tự build + bật server (cổng 3031) và client (cổng 5185), chạy xong tự tắt
+npm run test:ui-e2e:report        # xem báo cáo HTML, có ảnh chụp và trace khi test lỗi
+```
+
+Chỉ cần MongoDB chạy ở `localhost:27017`. Mỗi lần chạy, database `travellog_e2e` được xoá rồi seed lại (admin + dữ liệu demo), không đụng database dev; ảnh tải lên lưu ở `server/uploads/`, không lên Cloudinary.
+
 ## Tài khoản demo
 
 Dùng trên web thật (https://travellog-rust.vercel.app) hoặc trên máy sau khi chạy `npm run seed:demo` trong `server/`.
