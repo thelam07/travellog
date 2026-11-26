@@ -1,5 +1,5 @@
 // client/src/components/ProfileMap.tsx
-// B14 (N01): bản đồ Leaflet trên trang cá nhân.
+// B14 (N01): bản đồ Leaflet trên trang cá nhân (nền Google Maps khi có key, xem BanDoNen).
 // - Tải lười bằng React.lazy (xem cách dùng ở ProfilePage).
 // - Sửa đường dẫn icon ghim mặc định cho Vite (Leaflet tự require image nội bộ → URL lỗi).
 // - Tự căn khung theo các ghim (fitBounds); bấm ghim hiện popup có link tới bài.
@@ -9,10 +9,11 @@ import 'leaflet/dist/leaflet.css';
 import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router';
 import L from 'leaflet';
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
+import { MapContainer, Marker, Popup, useMap } from 'react-leaflet';
 import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
+import { BanDoNen } from './BanDoNen';
 import { EmptyState } from './EmptyState';
 import { PageSpinner } from './Spinner';
 import type { MapPoint } from '../types';
@@ -80,10 +81,7 @@ export default function ProfileMap({ points, loading, error }: ProfileMapProps) 
         scrollWheelZoom
         style={{ height: '480px', width: '100%', borderRadius: '8px' }}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <BanDoNen />
         <FitBounds points={points} />
         {points.map((p) => (
           <Marker key={p.postId} position={[p.lat, p.lng]}>
