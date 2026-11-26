@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { useDebounce } from '../hooks/useDebounce';
 import { useUserSearch } from '../hooks/useUserSearch';
 import UserMiniCard from './UserMiniCard';
+import { Search, X } from 'lucide-react';
 
 export interface SearchBoxProps {
   /** Khởi tạo giá trị (vd: từ URL ?q=...). Controlled bên ngoài qua initialValue. */
@@ -93,7 +94,7 @@ export function SearchBox({
 
   return (
     <form ref={formRef} className="search-box" onSubmit={submit} role="search">
-      <span className="search-box-icon" aria-hidden="true">🔍</span>
+      <span className="search-box-icon" aria-hidden="true"><Search size={16} /></span>
       <input
         type="search"
         value={value}
@@ -114,7 +115,7 @@ export function SearchBox({
           aria-label="Xoá"
           onClick={() => setValue('')}
         >
-          ×
+          <X size={16} />
         </button>
       )}
       {showList && (
@@ -128,7 +129,7 @@ export function SearchBox({
           )}
           {!userOnly && (
             <button type="submit" className="search-suggest-posts">
-              🔍 Tìm bài viết với “{text}”
+              <Search size={15} aria-hidden /> Tìm bài viết với “{text}”
             </button>
           )}
         </div>

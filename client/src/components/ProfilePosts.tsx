@@ -11,6 +11,7 @@ import type { Post } from '../types';
 import { EmptyState } from './EmptyState';
 import { PostCard } from './PostCard';
 import { Spinner } from './Spinner';
+import { NotebookPen } from 'lucide-react';
 
 interface Props {
   username: string;
@@ -80,7 +81,7 @@ export default function ProfilePosts({ username, isSelf }: Props) {
   if (items.length === 0) {
     return (
       <EmptyState
-        icon="📝"
+        icon={<NotebookPen size={48} strokeWidth={1.5} />}
         title="Chưa có bài viết nào"
         action={
           isSelf ? (

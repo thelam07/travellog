@@ -2,6 +2,7 @@
 // Chọn chế độ hiển thị: Công khai / Chỉ người theo dõi.
 
 import type { Visibility } from '../types';
+import { Globe, Users, type LucideIcon } from 'lucide-react';
 
 export interface VisibilityPickerProps {
   value: Visibility;
@@ -9,9 +10,9 @@ export interface VisibilityPickerProps {
   error?: string;
 }
 
-const OPTIONS: { value: Visibility; label: string; icon: string; hint: string }[] = [
-  { value: 'public', label: 'Công khai', icon: '🌍', hint: 'Mọi người đều xem được' },
-  { value: 'followers', label: 'Chỉ người theo dõi', icon: '🔒', hint: 'Chỉ người theo dõi bạn xem được' },
+const OPTIONS: { value: Visibility; label: string; icon: LucideIcon; hint: string }[] = [
+  { value: 'public', label: 'Công khai', icon: Globe, hint: 'Mọi người đều xem được' },
+  { value: 'followers', label: 'Chỉ người theo dõi', icon: Users, hint: 'Chỉ người theo dõi bạn xem được' },
 ];
 
 export function VisibilityPicker({ value, onChange, error }: VisibilityPickerProps) {
@@ -30,7 +31,7 @@ export function VisibilityPicker({ value, onChange, error }: VisibilityPickerPro
               checked={value === opt.value}
               onChange={() => onChange(opt.value)}
             />
-            <span className="visibility-icon">{opt.icon}</span>
+            <opt.icon className="visibility-icon" size={18} aria-hidden />
             <span className="visibility-label">{opt.label}</span>
             <span className="visibility-hint">{opt.hint}</span>
           </label>

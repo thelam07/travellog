@@ -16,6 +16,7 @@ import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 import { EmptyState } from './EmptyState';
 import { PageSpinner } from './Spinner';
 import type { MapPoint } from '../types';
+import { MapIcon } from 'lucide-react';
 
 // Sửa icon mặc định: Vite không tự resolve được đường dẫn mà Leaflet gán trong CSS.
 // Gán URL từ các asset đã import → tile sẽ hiển thị đúng.
@@ -64,7 +65,7 @@ export default function ProfileMap({ points, loading, error }: ProfileMapProps) 
   if (points.length === 0) {
     return (
       <EmptyState
-        icon="🗺️"
+        icon={<MapIcon size={48} strokeWidth={1.5} />}
         title="Chưa có bài viết nào có toạ độ"
         description="Khi đăng bài có chọn địa điểm từ gợi ý Google, bài sẽ xuất hiện ở đây."
       />

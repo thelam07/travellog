@@ -6,15 +6,17 @@ import { Avatar } from './Avatar';
 import { LikeButton } from './LikeButton';
 import { PostGallery } from './PostGallery';
 import { timeAgo, formatDate, formatCurrency } from '../utils/format';
+import { CalendarDays, Globe, MapPin, MessageCircle, Users, Wallet } from 'lucide-react';
 
 export interface PostCardProps {
   post: Post;
 }
 
 export function PostCard({ post }: PostCardProps) {
-  // (A – mở rộng) Ảnh dạng lưới; bấm ảnh mở trình xem có cột bình luận, bình luận trong đó cập nhật số 💬
+  // (A – mở rộng) Ảnh dạng lưới; bấm ảnh mở trình xem có cột bình luận, bình luận trong đó cập nhật số bình luận
   const [commentCount, setCommentCount] = useState(post.commentCount);
-  const visibilityText = post.visibility === 'public' ? '🌐 Công khai' : '👥 Người theo dõi';
+  const visibilityText = post.visibility === 'public' ? 'Công khai' : 'Người theo dõi';
+  const VisibilityIcon = post.visibility === 'public' ? Globe : Users;
   
   const previewContent = post.content.length > 150 
     ? post.content.substring(0, 150) + '...' 
@@ -36,7 +38,7 @@ export function PostCard({ post }: PostCardProps) {
           <div className="muted small post-meta">
             <span>{timeAgo(post.createdAt)}</span>
             <span>·</span>
-            <span>{visibilityText}</span>
+            <span className="detail-item"><VisibilityIcon size={14} aria-hidden />{visibilityText}</span>
           </div>
         </div>
       </div>
@@ -49,13 +51,13 @@ export function PostCard({ post }: PostCardProps) {
         
         <div className="muted small post-details">
           {post.location && (
-            <span className="detail-item">📍 {post.location.name}</span>
+            <span className="detail-item"><MapPin size={15} aria-hidden />{post.location.name}</span>
           )}
           {post.tripDate && (
-            <span className="detail-item">📅 {formatDate(post.tripDate)}</span>
+            <span className="detail-item"><CalendarDays size={15} aria-hidden />{formatDate(post.tripDate)}</span>
           )}
           {post.cost > 0 && (
-            <span className="detail-item">💰 {formatCurrency(post.cost)}</span>
+            <span className="detail-item"><Wallet size={15} aria-hidden />{formatCurrency(post.cost)}</span>
           )}
         </div>
       </div>
@@ -87,7 +89,8 @@ export function PostCard({ post }: PostCardProps) {
         <LikeButton postId={post._id} initialLiked={post.likedByMe} initialCount={post.likeCount} />
         
         <Link to={`/posts/${post._id}`} className="btn btn-ghost">
-          💬 {commentCount}
+          <MessageCircle size={18} aria-hidden />
+          {commentCount}
         </Link>
       </div>
     </div>

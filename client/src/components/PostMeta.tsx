@@ -2,6 +2,7 @@
 // Hiện địa điểm, ngày đi (dd/mm/yyyy), chi phí (Intl.NumberFormat 'vi-VN').
 
 import type { PostLocation } from '../types';
+import { CalendarDays, MapPin, Wallet } from 'lucide-react';
 
 export interface PostMetaProps {
   location?: PostLocation;
@@ -27,19 +28,19 @@ export function PostMeta({ location, tripDate, cost }: PostMetaProps) {
     <div className="post-meta-list">
       {location?.name && (
         <div className="post-meta-item">
-          <span className="post-meta-icon" aria-hidden="true">📍</span>
+          <span className="post-meta-icon" aria-hidden="true"><MapPin size={17} /></span>
           <span>{location.name}</span>
         </div>
       )}
       {tripDate && (
         <div className="post-meta-item">
-          <span className="post-meta-icon" aria-hidden="true">📅</span>
+          <span className="post-meta-icon" aria-hidden="true"><CalendarDays size={17} /></span>
           <span>{formatTripDate(tripDate)}</span>
         </div>
       )}
       {cost > 0 && (
         <div className="post-meta-item">
-          <span className="post-meta-icon" aria-hidden="true">💰</span>
+          <span className="post-meta-icon" aria-hidden="true"><Wallet size={17} /></span>
           <span>{formatVND(cost)}</span>
         </div>
       )}

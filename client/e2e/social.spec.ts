@@ -38,21 +38,21 @@ test.describe('Kết nối và tương tác', () => {
     const { ctx, page } = await as(browser, 'hoa');
     await page.goto('/u/minh');
     await page.getByRole('link', { name: 'Sapa mùa lúa chín' }).click();
-    const like = page.getByRole('article').getByRole('button', { name: /^(🤍|❤️) \d+$/ });
-    await expect(like).toHaveText(/🤍\s*0/);
+    const like = page.getByRole('article').getByRole('button', { name: /^(Thích|Bỏ thích), \d+ lượt thích$/ });
+    await expect(like).toHaveAccessibleName('Thích, 0 lượt thích');
     // Giao diện đổi ngay (optimistic), đồng thời chờ server lưu xong rồi mới tải lại trang
     const saved = page.waitForResponse((r) => r.url().includes('/likes') && r.request().method() === 'POST');
     await like.click();
-    await expect(like).toHaveText(/❤️\s*1/);
+    await expect(like).toHaveAccessibleName('Bỏ thích, 1 lượt thích');
     expect((await saved).status()).toBe(201);
     await page.reload();
-    await expect(like).toHaveText(/❤️\s*1/);
+    await expect(like).toHaveAccessibleName('Bỏ thích, 1 lượt thích');
     const removed = page.waitForResponse((r) => r.url().includes('/likes') && r.request().method() === 'DELETE');
     await like.click();
-    await expect(like).toHaveText(/🤍\s*0/);
+    await expect(like).toHaveAccessibleName('Thích, 0 lượt thích');
     expect((await removed).ok()).toBe(true);
     await page.reload();
-    await expect(like).toHaveText(/🤍\s*0/);
+    await expect(like).toHaveAccessibleName('Thích, 0 lượt thích');
     await ctx.close();
   });
 

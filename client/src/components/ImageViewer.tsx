@@ -11,6 +11,7 @@ import { timeAgo } from '../utils/format';
 import { Avatar } from './Avatar';
 import { CommentList } from './comments/CommentList';
 import { LikeButton } from './LikeButton';
+import { ChevronLeft, ChevronRight, Globe, MessageCircle, Users, X, ZoomIn, ZoomOut } from 'lucide-react';
 
 export interface ViewerImage {
   url: string;
@@ -134,7 +135,7 @@ export default function ImageViewer({ images, startIndex = 0, onClose, post, onC
 
         <div className="viewer-top">
           <button type="button" className="viewer-btn" onClick={onClose} aria-label="Đóng">
-            ✕
+            <X size={22} />
           </button>
           {many && (
             <span className="viewer-count">
@@ -143,20 +144,20 @@ export default function ImageViewer({ images, startIndex = 0, onClose, post, onC
           )}
           <span className="viewer-spacer" />
           <button type="button" className="viewer-btn" onClick={() => zoomBy(0.5)} disabled={zoom >= MAX_ZOOM} aria-label="Phóng to">
-            ＋
+            <ZoomIn size={20} />
           </button>
           <button type="button" className="viewer-btn" onClick={() => zoomBy(-0.5)} disabled={zoom <= MIN_ZOOM} aria-label="Thu nhỏ">
-            −
+            <ZoomOut size={20} />
           </button>
         </div>
 
         {many && (
           <>
             <button type="button" className="viewer-btn viewer-prev" onClick={() => go(-1)} aria-label="Ảnh trước">
-              ‹
+              <ChevronLeft size={28} />
             </button>
             <button type="button" className="viewer-btn viewer-next" onClick={() => go(1)} aria-label="Ảnh sau">
-              ›
+              <ChevronRight size={28} />
             </button>
           </>
         )}
@@ -172,8 +173,10 @@ export default function ImageViewer({ images, startIndex = 0, onClose, post, onC
               <Link to={`/u/${post.author.username}`} onClick={onClose} className="viewer-author-name">
                 {authorName}
               </Link>
-              <div className="muted small">
-                {timeAgo(post.createdAt)} · {post.visibility === 'public' ? '🌍 Công khai' : '🔒 Người theo dõi'}
+              <div className="muted small detail-item">
+                {timeAgo(post.createdAt)} ·{' '}
+                {post.visibility === 'public' ? <Globe size={14} aria-hidden /> : <Users size={14} aria-hidden />}
+                {post.visibility === 'public' ? 'Công khai' : 'Người theo dõi'}
               </div>
             </div>
           </div>
@@ -181,7 +184,7 @@ export default function ImageViewer({ images, startIndex = 0, onClose, post, onC
           {post.content && <p className="viewer-content">{post.content}</p>}
           <div className="viewer-actions">
             <LikeButton postId={post._id} initialLiked={post.likedByMe} initialCount={post.likeCount} />
-            <span className="muted">💬 {commentCount}</span>
+            <span className="muted detail-item"><MessageCircle size={18} aria-hidden />{commentCount}</span>
           </div>
           {/* Bình luận dùng component của C (C8/C9), đặt trong thẻ có tiêu đề như bản mẫu */}
           <section className="viewer-comments">

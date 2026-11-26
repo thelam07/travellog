@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import type { PagedList, Role, User } from '../../types';
 import { formatDate, ROLE_LABELS } from '../../utils/format';
 import { hasErrors, validateEmail, validatePassword, validateUsername, type Errors } from '../../utils/validators';
+import { ChevronLeft, ChevronRight, UserPlus, X } from 'lucide-react';
 
 // Hộp thoại tạm dùng chung trong trang; khi C xong Modal / ConfirmDialog thì thay vào.
 function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
@@ -21,7 +22,7 @@ function Dialog({ title, onClose, children }: { title: string; onClose: () => vo
         <div className="dialog-head">
           <h2>{title}</h2>
           <button type="button" className="btn btn-ghost" onClick={onClose} aria-label="Đóng">
-            ✕
+            <X size={20} />
           </button>
         </div>
         {children}
@@ -253,7 +254,8 @@ export default function AdminUsersPage() {
       <div className="page-head">
         <h1>Quản lý tài khoản</h1>
         <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
-          ＋ Tạo tài khoản
+          <UserPlus size={18} aria-hidden />
+          Tạo tài khoản
         </button>
       </div>
       <form className="search-row" onSubmit={search} role="search">
@@ -360,7 +362,8 @@ export default function AdminUsersPage() {
       {data && totalPages > 1 && (
         <nav className="pager" aria-label="Phân trang">
           <button type="button" className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            ‹ Trước
+            <ChevronLeft size={16} aria-hidden />
+            Trước
           </button>
           <span className="muted small">
             Trang {data.page}/{totalPages} · {data.total} tài khoản
@@ -371,7 +374,8 @@ export default function AdminUsersPage() {
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
-            Sau ›
+            Sau
+            <ChevronRight size={16} aria-hidden />
           </button>
         </nav>
       )}

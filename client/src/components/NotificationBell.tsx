@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotificationSocket } from '../hooks/useNotificationSocket';
 import { usePolling } from '../hooks/usePolling';
 import { useNotificationStore } from '../stores/useNotificationStore';
+import { Bell } from 'lucide-react';
 
 /**
  * F11: chuông thông báo; chỉ thành viên (admin không có thông báo). Thông báo mới tới ngay qua Socket.IO (N03),
@@ -25,7 +26,7 @@ export default function NotificationBell({ label = false, poll = true }: { label
       aria-label={unread ? `Thông báo, ${unread} chưa đọc` : 'Thông báo'}
     >
       <span className="bell-icon" aria-hidden="true">
-        🔔
+        <Bell size={22} />
         {unread > 0 && <span className="bell-badge">{unread > 99 ? '99+' : unread}</span>}
       </span>
       {label && <span>Thông báo</span>}

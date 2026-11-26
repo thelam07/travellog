@@ -5,6 +5,7 @@ import SearchBox from '../components/SearchBox';
 import ThemeToggle from '../components/ThemeToggle';
 import UserMenu from '../components/UserMenu';
 import { useAuth } from '../contexts/AuthContext';
+import { Plane } from 'lucide-react';
 
 // Khung trang chính: header + nội dung trang con qua <Outlet />.
 // Điện thoại: các link trên header (desktop-only) ẩn đi, thay bằng BottomNav dưới đáy.
@@ -17,7 +18,7 @@ export default function MainLayout() {
     <div className="app">
       <header className="header">
         <div className="container header-inner">
-          <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true">✈</span>TravelLog</Link>
+          <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true"><Plane size={18} /></span>TravelLog</Link>
           <div className="desktop-only header-search">
             {/* B11 + E01: Enter thì tới /explore?q=..., gõ @ thì gợi ý người dùng */}
             <SearchBox
